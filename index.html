@@ -1,0 +1,4723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0f0a1a">
+<title>江苏省音乐艺考抽签系统 V6.1</title>
+<style>
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0a1a;
+  --surface:rgba(255,255,255,0.05);
+  --surface-hover:rgba(255,255,255,0.09);
+  --border:rgba(255,255,255,0.1);
+  --text:#e8e0f0;
+  --text-dim:#9a8aaa;
+  --accent:#a855f7;
+  --accent1:#a855f7;
+  --accent2:#ec4899;
+  --accent3:#06b6d4;
+  --gold:#f59e0b;
+  --gold-bright:#fbbf24;
+  --danger:#ef4444;
+  --success:#22c55e;
+  --radius:16px;
+  --radius-sm:10px;
+  --shadow:0 4px 30px rgba(0,0,0,0.3);
+  --shadow-lg:0 12px 48px rgba(0,0,0,0.4);
+  --transition:0.25s cubic-bezier(0.4,0,0.2,1);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  line-height:1.6;
+}
+/* Animated background */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(168,85,247,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(236,72,153,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.06) 0%, transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+/* Floating music notes decoration - reduced count, simplified animation */
+.music-bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.music-bg .note{
+  position:absolute;
+  font-size:2rem;
+  opacity:0.06;
+  animation:floatNote linear infinite;
+  will-change:transform;
+}
+.music-bg .note:nth-child(1){left:5%;top:15%;animation-duration:22s;font-size:2.5rem}
+.music-bg .note:nth-child(2){left:20%;top:60%;animation-duration:26s;font-size:1.8rem;animation-delay:-7s}
+.music-bg .note:nth-child(3){left:35%;top:30%;animation-duration:24s;font-size:3rem;animation-delay:-12s}
+.music-bg .note:nth-child(4){left:50%;top:70%;animation-duration:28s;font-size:2.2rem;animation-delay:-4s}
+.music-bg .note:nth-child(5){left:65%;top:20%;animation-duration:23s;font-size:2.8rem;animation-delay:-10s}
+.music-bg .note:nth-child(6){left:78%;top:55%;animation-duration:25s;font-size:2rem;animation-delay:-6s}
+.music-bg .note:nth-child(7){left:88%;top:40%;animation-duration:21s;font-size:2.4rem;animation-delay:-14s}
+.music-bg .note:nth-child(8){left:12%;top:80%;animation-duration:27s;font-size:2.6rem;animation-delay:-8s}
+@keyframes floatNote{
+  0%{transform:translateY(0);opacity:0.04}
+  50%{transform:translateY(-50px);opacity:0.08}
+  100%{transform:translateY(0);opacity:0.04}
+}
+@media(prefers-reduced-motion:reduce){
+  .music-bg .note{animation:none}
+}
+
+/* Container */
+.container{max-width:1200px;margin:0 auto;padding:20px;position:relative;z-index:1}
+.page{display:none}
+.page.active{display:block;animation:fadeIn 0.35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.header{
+  text-align:center;
+  padding:40px 20px 30px;
+  position:relative;
+}
+.header h1{
+  font-size:clamp(1.6rem,4vw,2.8rem);
+  font-weight:800;
+  background:linear-gradient(135deg, #c084fc, #f472b6, #fbbf24);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  letter-spacing:0.04em;
+  margin-bottom:8px;
+}
+.header .subtitle{
+  font-size:0.95rem;
+  color:var(--text-dim);
+  letter-spacing:0.08em;
+}
+.header::after{
+  content:'';
+  display:block;
+  width:80px;height:3px;
+  margin:16px auto 0;
+  border-radius:2px;
+  background:linear-gradient(90deg,var(--accent1),var(--accent2));
+}
+
+/* Staff lines decoration */
+.staff-lines{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  width:100%;
+  max-width:300px;
+  margin:20px auto;
+  opacity:0.12;
+}
+.staff-lines span{
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--text),transparent);
+  border-radius:1px;
+}
+
+/* ============================================================
+   CARDS - Main Page
+   ============================================================ */
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:24px;
+  margin:30px auto;
+  max-width:1000px;
+  justify-content:center;
+}
+.card{
+  background:rgba(255,255,255,0.06);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:44px 26px;
+  text-align:center;
+  cursor:pointer;
+  transition:all var(--transition);
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:4px;
+  border-radius:4px 4px 0 0;
+}
+.card:nth-child(1)::before{background:linear-gradient(90deg,#a855f7,#c084fc)}
+.card:nth-child(2)::before{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.card:nth-child(3)::before{background:linear-gradient(90deg,#06b6d4,#22d3ee)}
+.card:not(.no-scale):hover{
+  transform:translateY(-6px);
+  box-shadow:0 16px 48px rgba(168,85,247,0.2);
+  border-color:rgba(168,85,247,0.3);
+}
+.card:not(.no-scale):active{transform:scale(0.94)}
+.card .card-icon{
+  font-size:3.4rem;
+  margin-bottom:18px;
+  display:block;
+}
+.card .card-title{
+  font-size:1.6rem;
+  font-weight:700;
+  margin-bottom:0;
+  background:linear-gradient(135deg,var(--text),#c4b5fd);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.card .card-desc{
+  font-size:0.88rem;
+  color:var(--text-dim);
+  line-height:1.5;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 22px;
+  border:none;
+  border-radius:var(--radius-sm);
+  font-size:0.92rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:all var(--transition);
+  font-family:inherit;
+  color:#fff;
+  position:relative;
+  overflow:hidden;
+}
+.btn::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.2),transparent);
+  opacity:0;
+  transition:opacity var(--transition);
+}
+.btn:hover::after{opacity:1}
+.btn:active{transform:scale(0.94)}
+
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent1),#7c3aed);
+  box-shadow:0 4px 16px rgba(168,85,247,0.3);
+}
+.btn-primary:hover{box-shadow:0 6px 24px rgba(168,85,247,0.45)}
+.btn-pink{
+  background:linear-gradient(135deg,var(--accent2),#db2777);
+  box-shadow:0 4px 16px rgba(236,72,153,0.3);
+}
+.btn-pink:hover{box-shadow:0 6px 24px rgba(236,72,153,0.45)}
+.btn-cyan{
+  background:linear-gradient(135deg,var(--accent3),#0891b2);
+  box-shadow:0 4px 16px rgba(6,182,212,0.3);
+}
+.btn-cyan:hover{box-shadow:0 6px 24px rgba(6,182,212,0.45)}
+.btn-gold{
+  background:linear-gradient(135deg,#f59e0b,#d97706);
+  box-shadow:0 4px 16px rgba(245,158,11,0.3);
+}
+.btn-gold:hover{box-shadow:0 6px 24px rgba(245,158,11,0.45)}
+.btn-outline{
+  background:transparent;
+  border:1.5px solid var(--border);
+  color:var(--text);
+}
+.btn-outline:hover{
+  border-color:rgba(255,255,255,0.3);
+  background:rgba(255,255,255,0.05);
+}
+.btn-sm{padding:6px 14px;font-size:0.82rem}
+.btn-xs{padding:3px 10px;font-size:0.75rem;border-radius:6px}
+.row-checkbox{width:16px;height:16px;cursor:pointer;accent-color:var(--accent1)}
+.btn-danger-sm{padding:3px 10px;font-size:0.75rem;border-radius:6px;background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
+.btn-danger-sm:hover{background:rgba(239,68,68,0.25)}
+.btn:disabled{opacity:0.4;cursor:not-allowed;pointer-events:none}
+.btn-paste{
+  background:linear-gradient(135deg,#8b5cf6,#3b82f6);
+  box-shadow:0 4px 16px rgba(139,92,246,0.3);
+  font-weight:700;
+}
+.btn-paste:hover{box-shadow:0 6px 24px rgba(139,92,246,0.5)}
+
+/* ============================================================
+   PASTE TEXTAREA MODAL
+   ============================================================ */
+.paste-textarea{
+  width:100%;
+  min-height:160px;
+  padding:16px;
+  background:rgba(0,0,0,0.3);
+  border:2px dashed var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  font-size:0.88rem;
+  font-family:inherit;
+  resize:vertical;
+  margin:10px 0;
+  transition:border-color var(--transition);
+}
+.paste-textarea:focus{
+  outline:none;
+  border-color:var(--accent1);
+  box-shadow:0 0 0 3px rgba(168,85,247,0.1);
+}
+
+/* ============================================================
+   MODE SELECTOR (Draw Order / Pieces / Combined)
+   ============================================================ */
+.mode-selector{
+  display:flex;
+  gap:6px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:4px;
+  margin-bottom:0;
+  flex-shrink:0;
+}
+.mode-btn{
+  padding:7px 16px;
+  border:none;
+  border-radius:8px;
+  font-size:0.84rem;
+  font-weight:500;
+  cursor:pointer;
+  transition:all var(--transition);
+  font-family:inherit;
+  color:var(--text-dim);
+  background:transparent;
+  white-space:nowrap;
+}
+.mode-btn:hover{color:var(--text);background:var(--surface-hover)}
+.mode-btn.active{
+  background:rgba(168,85,247,0.2);
+  color:#c084fc;
+  font-weight:600;
+  box-shadow:0 0 12px rgba(168,85,247,0.15);
+}
+
+/* ============================================================
+   RESULT CELL - Prominent display
+   ============================================================ */
+.result-cell{
+  display:inline-block;
+  padding:6px 14px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:0.9rem;
+  text-align:center;
+  min-width:90px;
+  animation:popIn 0.4s ease;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+.result-cell.gold{
+  background:linear-gradient(135deg,#f59e0b,#d97706);
+  color:#fff;
+  box-shadow:0 0 16px rgba(245,158,11,0.4);
+}
+.result-cell.pink{
+  background:linear-gradient(135deg,#ec4899,#be185d);
+  color:#fff;
+  box-shadow:0 0 16px rgba(236,72,153,0.35);
+}
+.result-cell.cyan{
+  background:linear-gradient(135deg,#06b6d4,#0e7490);
+  color:#fff;
+  box-shadow:0 0 16px rgba(6,182,212,0.35);
+}
+.result-cell.placeholder{
+  background:rgba(255,255,255,0.03);
+  color:var(--text-dim);
+  border:1px dashed rgba(255,255,255,0.08);
+  font-weight:400;
+  box-shadow:none;
+}
+@keyframes popIn{
+  0%{transform:scale(0.3);opacity:0}
+  50%{transform:scale(1.15)}
+  100%{transform:scale(1);opacity:1}
+}
+
+/* ============================================================
+   RESULT BADGE (legacy, smaller)
+   ============================================================ */
+.result-badge{
+  display:inline-block;
+  padding:4px 12px;
+  border-radius:20px;
+  font-weight:700;
+  font-size:0.82rem;
+  animation:popIn 0.4s ease;
+}
+.result-badge.gold{
+  background:linear-gradient(135deg,#f59e0b,#d97706);
+  color:#fff;
+  box-shadow:0 0 16px rgba(245,158,11,0.4);
+}
+.result-badge.pending{color:var(--text-dim);font-style:italic}
+
+/* ============================================================
+   SIGHT REPEATABLE TOGGLE
+   ============================================================ */
+.sight-repeat-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:0.85rem;
+  transition:all var(--transition);
+  font-family:inherit;
+}
+.sight-repeat-toggle:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+.sight-repeat-toggle.active{color:var(--accent3);border-color:rgba(6,182,212,0.3)}
+
+/* ============================================================
+   PAGE HEADER (Back button)
+   ============================================================ */
+.page-header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:24px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--border);
+}
+.page-header h2{
+  font-size:1.5rem;
+  font-weight:700;
+}
+
+/* ============================================================
+   PERF TYPE SELECT DROPDOWN
+   ============================================================ */
+.perf-type-select{
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:6px;
+  background:rgba(255,255,255,0.06);
+  color:var(--text);
+  font-size:0.82rem;
+  text-align:center;
+  font-family:inherit;
+  cursor:pointer;
+  transition:all var(--transition);
+  min-width:80px;
+}
+.perf-type-select:focus{
+  outline:none;
+  border-color:var(--accent2);
+  box-shadow:0 0 0 3px rgba(236,72,153,0.1);
+}
+.perf-type-select option{
+  background:#1a1030;
+  color:var(--text);
+}
+.perf-type-select.type-instrumental{color:#fbbf24}
+.perf-type-select.type-vocal{color:#f472b6}
+
+.back-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:8px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  cursor:pointer;
+  font-size:0.9rem;
+  transition:all var(--transition);
+  font-family:inherit;
+}
+.back-btn:hover{
+  background:var(--surface-hover);
+  border-color:rgba(255,255,255,0.2);
+}
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+.toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
+  align-items:center;
+}
+.toolbar .muted-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:0.85rem;
+  transition:all var(--transition);
+}
+.toolbar .muted-toggle:hover{color:var(--text);border-color:rgba(255,255,255,0.2)}
+.toolbar .muted-toggle.muted{color:#ef4444}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+.table-wrap{
+  overflow-x:auto;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.06);
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:0.88rem;
+}
+/* 单元格一律单行：避免列被压缩后逐字换行、把整行撑到一两百像素高 */
+tbody td{white-space:nowrap}
+.result-cell{white-space:nowrap}
+tbody td:last-child .btn-xs{margin:0 2px}
+thead th{
+  background:rgba(168,85,247,0.15);
+  padding:12px 10px;
+  text-align:center;
+  font-weight:600;
+  font-size:0.82rem;
+  color:#c4b5fd;
+  border-bottom:2px solid rgba(168,85,247,0.25);
+  white-space:nowrap;
+  position:sticky;
+  top:0;
+}
+tbody td{
+  padding:8px 6px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+  transition:background var(--transition);
+}
+tbody tr:hover{background:var(--surface-hover)}
+tbody tr.row-highlight{background:rgba(245,158,11,0.12)}
+tbody td input{
+  width:100%;
+  min-width:70px;
+  padding:6px 8px;
+  border:1px solid transparent;
+  border-radius:6px;
+  background:rgba(255,255,255,0.04);
+  color:var(--text);
+  font-size:0.85rem;
+  text-align:center;
+  font-family:inherit;
+  transition:all var(--transition);
+}
+tbody td input:focus{
+  outline:none;
+  border-color:var(--accent1);
+  background:rgba(168,85,247,0.1);
+  box-shadow:0 0 0 3px rgba(168,85,247,0.1);
+}
+tbody td input.order-input{width:50px;min-width:50px;color:var(--gold)}
+/* ============================================================
+   LOTTERY ANIMATION OVERLAY
+   ============================================================ */
+.lottery-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,10,26,0.9);
+  z-index:1000;
+  justify-content:center;
+  align-items:center;
+}
+.lottery-overlay.active{display:flex}
+.lottery-display{
+  text-align:center;
+  max-width:96vw;
+  min-width:0;
+  padding:0 8px;
+}
+.lottery-rolling{
+  font-size:5rem;
+  font-weight:900;
+  color:var(--text);
+  transition:color .25s, text-shadow .25s;
+  will-change:transform,opacity,filter;
+  line-height:1.15;
+  max-width:92vw;
+  word-break:break-word;
+}
+.lottery-rolling.tick{animation:slotTick .13s cubic-bezier(.2,.7,.3,1)}
+@keyframes slotTick{
+  0%{transform:translateY(-16px);opacity:.3;filter:blur(3px)}
+  100%{transform:translateY(0);opacity:1;filter:blur(0)}
+}
+.lottery-rolling.gold{
+  color:var(--gold-bright);
+  text-shadow:0 0 40px rgba(245,158,11,0.6);
+  animation:pulse 0.5s ease 3;
+}
+@keyframes pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.08)}
+}
+.lottery-label{
+  font-size:1rem;
+  color:var(--text-dim);
+  margin-top:12px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast{
+  position:fixed;
+  bottom:32px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(30,20,50,0.97);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 28px;
+  color:var(--text);
+  font-size:0.9rem;
+  z-index:2000;
+  animation:toastIn 0.3s ease,toastOut 0.3s ease 2.5s forwards;
+}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0}}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.modal-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  z-index:900;
+  justify-content:center;
+  align-items:center;
+}
+.modal-overlay.active{display:flex}
+.modal{
+  background:rgba(25,15,45,0.98);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px;
+  max-width:500px;
+  width:90%;
+  max-height:80vh;
+  max-height:80dvh;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  box-shadow:var(--shadow-lg);
+  animation:modalIn 0.3s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(0.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal h3{font-size:1.3rem;margin-bottom:20px;text-align:center}
+.modal .menu-item{
+  display:block;
+  width:100%;
+  padding:12px 16px;
+  margin-bottom:8px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  cursor:pointer;
+  font-size:0.95rem;
+  text-align:left;
+  transition:all var(--transition);
+  font-family:inherit;
+}
+.modal .menu-item:hover{background:var(--surface-hover);border-color:rgba(255,255,255,0.2)}
+.modal .menu-item.danger{color:var(--danger)}
+.modal .menu-item.danger:hover{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3)}
+.modal .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+
+/* ============================================================
+   PASTE PREVIEW MODAL
+   ============================================================ */
+.paste-preview-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:0.82rem;
+  margin:16px 0;
+}
+.paste-preview-table th{
+  background:rgba(168,85,247,0.12);
+  padding:8px 6px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+  font-size:0.78rem;
+  color:#c4b5fd;
+}
+.paste-preview-table td{
+  padding:6px 4px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+  color:var(--text);
+}
+.paste-preview-table td.name-col{color:var(--gold);font-weight:600}
+.paste-preview-table td.piece-col{color:var(--text-dim)}
+.paste-info{
+  text-align:center;
+  color:var(--text-dim);
+  font-size:0.85rem;
+  margin-bottom:12px;
+  padding:8px 16px;
+  background:rgba(168,85,247,0.08);
+  border-radius:var(--radius-sm);
+}
+
+/* ============================================================
+   HISTORY PAGE
+   ============================================================ */
+.history-group{
+  margin-bottom:24px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  background:var(--surface);
+}
+.history-group-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 20px;
+  background:rgba(168,85,247,0.1);
+  cursor:pointer;
+  transition:all var(--transition);
+}
+.history-group-header:hover{background:rgba(168,85,247,0.15)}
+.history-group-header .date-label{font-weight:700;font-size:1rem}
+.history-group-header .date-actions{display:flex;gap:6px}
+.history-group-body{
+  display:none;
+  padding:16px 20px;
+}
+.history-group-body.open{display:block}
+.history-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 14px;
+  margin-bottom:8px;
+  background:rgba(255,255,255,0.03);
+  border-radius:var(--radius-sm);
+  transition:all var(--transition);
+}
+.history-item:hover{background:var(--surface-hover)}
+.history-item .item-info{flex:1}
+.history-item .item-module{
+  display:inline-block;
+  padding:2px 10px;
+  border-radius:12px;
+  font-size:0.75rem;
+  font-weight:600;
+  margin-right:8px;
+}
+.history-item .item-module.edu{background:rgba(168,85,247,0.2);color:#c084fc}
+.history-item .item-module.perf{background:rgba(236,72,153,0.2);color:#f472b6}
+.history-item .item-module.sight{background:rgba(6,182,212,0.2);color:#22d3ee}
+.history-item .item-count{font-size:0.82rem;color:var(--text-dim);margin-left:8px}
+.history-item .item-time{font-size:0.78rem;color:var(--text-dim)}
+.empty-state{
+  text-align:center;
+  padding:60px 20px;
+  color:var(--text-dim);
+  font-size:1rem;
+}
+.empty-state .empty-icon{font-size:3rem;margin-bottom:16px;display:block}
+
+/* ============================================================
+   SIGHT-SINGING CONFIG
+   ============================================================ */
+.sight-config{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+.sight-config label{
+  font-size:0.9rem;
+  color:var(--text-dim);
+}
+.sight-config input[type=number]{
+  width:70px;
+  padding:8px 12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:rgba(255,255,255,0.05);
+  color:var(--text);
+  font-size:0.95rem;
+  text-align:center;
+  font-family:inherit;
+}
+.sight-config input[type=number]:focus{
+  outline:none;
+  border-color:var(--accent3);
+  box-shadow:0 0 0 3px rgba(6,182,212,0.1);
+}
+
+/* ============================================================
+   DETAIL MODAL (History Detail)
+   ============================================================ */
+.detail-table-wrap{
+  max-height:50vh;
+  overflow-y:auto;
+  margin:16px 0;
+}
+.detail-table{
+  width:100%;
+  font-size:0.82rem;
+}
+.detail-table th{
+  background:rgba(168,85,247,0.12);
+  padding:8px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+  font-size:0.78rem;
+}
+.detail-table td{
+  padding:6px;
+  border-bottom:1px solid var(--border);
+  text-align:center;
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+}
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.2)}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media(max-width:768px){
+  .container{padding:12px;padding-bottom:env(safe-area-inset-bottom,12px)}
+  .header{padding:24px 12px 20px}
+  .header h1{font-size:1.4rem}
+  .cards-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .card{padding:24px 16px}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .mode-selector{justify-content:center;flex-wrap:wrap}
+  table{font-size:0.78rem}
+  thead th,tbody td{padding:6px 4px}
+  tbody td input{font-size:16px;padding:4px}
+  tbody td select{font-size:16px}
+  .lottery-rolling{font-size:3rem}
+  .btn-xs{padding:4px 12px;font-size:0.8rem}
+  .btn-danger-sm{padding:4px 12px;font-size:0.8rem}
+  .row-checkbox{width:20px;height:20px}
+}
+@media(max-width:480px){
+  .header h1{font-size:1.15rem}
+  .header p{font-size:0.8rem}
+  .card{padding:16px 12px}
+  .toolbar{gap:6px}
+  .btn{padding:6px 12px;font-size:0.82rem}
+  .btn-xs,.btn-danger-sm{padding:4px 10px;font-size:0.75rem}
+  table{font-size:0.72rem}
+  thead th,tbody td{padding:4px 2px}
+  tbody td input{font-size:16px;padding:2px}
+}
+/* iOS 平滑滚动 */
+.table-wrap{-webkit-overflow-scrolling:touch}
+/* 防止iOS输入框聚焦缩放 */
+@media(max-width:768px){
+  input,select,textarea{font-size:16px !important}
+  .order-input{font-size:16px !important}
+  .perf-type-select{font-size:16px !important}
+}
+
+/* ============================================================
+   平板 / 手机 适配（覆盖上面基础规则，全部按宽度分级）
+   ============================================================ */
+
+/* ---------- 平板竖屏 & 小笔记本：卡片别太高 ---------- */
+@media(min-width:561px) and (max-width:1100px){
+  .cards-grid{gap:18px;margin:24px auto}
+  .card{padding:32px 20px}
+  .card .card-icon{font-size:2.8rem;margin-bottom:14px}
+  .card .card-title{font-size:1.35rem}
+  .container{padding:16px}
+  table{font-size:0.84rem}
+}
+
+/* ---------- 手机 & 小平板：≤768 ---------- */
+@media(max-width:768px){
+  /* 头部收紧 */
+  .header{padding:20px 14px 12px}
+  .header h1{font-size:1.32rem;letter-spacing:0.01em}
+  .header .subtitle{font-size:0.6rem;letter-spacing:0.09em}
+  .staff-lines{margin:12px auto;gap:5px;max-width:220px}
+
+  /* 页面头 */
+  .page-header{gap:10px;margin-bottom:14px;padding-bottom:10px}
+  .page-header h2{font-size:1.12rem}
+  .back-btn{padding:7px 12px;font-size:0.8rem;min-height:36px}
+
+  /* 工具栏：不再整列竖排，按组横排 */
+  .toolbar:not(.quick-import-bar){flex-direction:row;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:14px}
+  .toolbar:not(.quick-import-bar) > span[style*="flex:1"]{display:none}
+  .mode-selector{width:100%;display:flex;gap:6px;flex-wrap:nowrap}
+  .mode-selector .mode-btn{
+    flex:1 1 0;min-width:0;padding:9px 2px;
+    font-size:0.75rem;white-space:nowrap;letter-spacing:-0.02em;
+  }
+  #actionBtns-edu,#actionBtns-perf,#actionBtns-sight{width:100%;display:flex;gap:6px;flex-wrap:wrap}
+  #actionBtns-edu > .btn,#actionBtns-perf > .btn,#actionBtns-sight > .btn{
+    flex:1 1 0;min-width:0;white-space:nowrap;padding:10px 4px;font-size:0.78rem;
+  }
+  /* 编辑类按钮（粘贴导入/添加行/删除选中/清空）四个挤一行，高度统一 */
+  .toolbar:not(.quick-import-bar) > .btn,
+  .toolbar:not(.quick-import-bar) > .btn-danger-sm{
+    flex:1 1 calc(25% - 6px);min-width:0;white-space:nowrap;
+    padding:0 2px;font-size:0.72rem;gap:2px;
+    min-height:38px;height:38px;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  /* 导出按钮组独占一行、两个均分 */
+  .toolbar:not(.quick-import-bar) > span[style*="inline-flex"]{width:100%;display:flex !important;gap:8px}
+  .toolbar:not(.quick-import-bar) > span[style*="inline-flex"] .btn{
+    flex:1 1 0;min-width:0;white-space:nowrap;
+    min-height:38px;height:38px;padding:0 4px;line-height:1;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  /* 抽签按钮（一键抽器乐/声乐/全抽）高度统一 */
+  #actionBtns-edu > .btn, #actionBtns-perf > .btn, #actionBtns-sight > .btn{
+    min-height:40px;height:40px;padding:0 6px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  #actionBtns-edu > div, #actionBtns-perf > div, #actionBtns-sight > div{gap:6px !important}
+
+  /* 主界面快速导入：两两一行，字号收一点 */
+  .quick-import-bar{flex-direction:row;flex-wrap:wrap;gap:8px;justify-content:center}
+  .quick-import-bar .btn{
+    flex:1 1 calc(50% - 4px);min-width:0;white-space:nowrap;
+    font-size:0.82rem !important;padding:11px 4px !important;
+  }
+  .btn{min-height:38px}
+  .btn-sm,.btn-xs{min-height:34px}
+
+  /* 表格可左右滑的提示（只在会溢出的页面显示） */
+  #page-edu .toolbar::after,
+  #page-perf .toolbar::after{
+    content:'← 左右滑动可查看完整表格 →';
+    flex:1 1 100%;text-align:center;
+    font-size:0.68rem;color:var(--text-dim);opacity:0.6;
+    padding-top:2px;
+  }
+
+  /* 视唱页顶部设置：允许换行、开关别独占一行 */
+  .sight-config{flex-wrap:nowrap;gap:8px;padding:10px 12px;justify-content:flex-start}
+  .sight-config label{font-size:0.84rem;white-space:nowrap}
+  .sight-config #sightCount{width:62px;padding:6px 8px;flex:0 0 auto}
+  .sight-config > span[style*="text-dim"]{display:none}   /* 手机上去掉说明文字 */
+  .sight-config > span[style*="flex:1"]{display:block;flex:1 1 auto}
+  .sight-config .sight-repeat-toggle{font-size:0.76rem;padding:7px 10px;min-height:36px;white-space:nowrap}
+
+  /* 表格：横向滑动，单元格不换行（否则行高会被撑到 170px） */
+  .table-wrap{overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain}
+  table{min-width:auto}
+  thead th, tbody td{white-space:nowrap}
+  thead th{position:sticky;top:0;z-index:3;background:#2b1f4a;box-shadow:0 1px 0 rgba(168,85,247,0.25)}
+  tbody td input{min-width:92px}
+  tbody td input.order-input{min-width:54px;width:54px}
+  .result-cell{min-width:92px;display:inline-block;white-space:nowrap}
+  /* 操作列两个按钮横排，不再换行堆叠 */
+  tbody td:last-child{white-space:nowrap}
+  tbody td:last-child .btn-xs{display:inline-block;margin:0 2px}
+
+  /* 弹窗：手机上留边距 + 高度限制（键盘弹出也不溢出） */
+  .modal{width:94vw;max-width:94vw;padding:20px 16px;max-height:84vh;max-height:84dvh;border-radius:16px}
+  .modal h3{font-size:1.1rem;margin-bottom:14px}
+  .modal .menu-item{padding:13px 14px;font-size:0.92rem;min-height:44px}
+  .modal .modal-actions{flex-direction:column;gap:8px}
+  .modal .modal-actions .btn{width:100%}
+  .paste-preview-table{font-size:0.76rem;min-width:500px}
+  .paste-preview-table th,.paste-preview-table td{padding:7px 6px;white-space:nowrap}
+  #pastePreviewContent{overflow-x:auto;max-height:46vh;-webkit-overflow-scrolling:touch}
+  .detail-table-wrap{overflow-x:auto}
+
+  /* 抽签遮罩：长曲目名不溢出 */
+  .lottery-rolling{font-size:clamp(1.7rem,9.6vw,3.2rem);max-width:100%;word-break:break-word;overflow-wrap:anywhere}
+  .lottery-label{font-size:0.86rem;margin-top:14px}
+
+  /* 音效开关缩小，别压住内容 */
+  .feedback-toggle{padding:5px 10px;font-size:0.66rem;border-radius:14px;opacity:0.92}
+  .container{padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+
+  /* 历史记录条目：手机上允许多行排布 */
+  .history-item{flex-wrap:wrap;gap:8px;padding:12px 14px}
+  .history-group-header{font-size:0.9rem;padding:10px 12px}
+}
+
+/* ---------- 纯手机：≤560 卡片改横排，一屏能看全 ---------- */
+@media(max-width:560px){
+  .cards-grid{grid-template-columns:1fr;gap:10px;margin:14px auto}
+  .cards-grid .card{
+    display:flex;align-items:center;gap:14px;
+    padding:15px 18px;text-align:left;border-radius:14px;
+    min-height:0;background-image:none;
+  }
+  .cards-grid .card .card-icon{font-size:1.95rem;margin:0;line-height:1;flex:0 0 auto}
+  .cards-grid .card .card-title{font-size:1.14rem;letter-spacing:0}
+  .cards-grid .card .card-desc{font-size:0.76rem}
+  .cards-grid .card::after{display:none}
+  .cards-grid .card:not(.no-scale):hover{transform:none;box-shadow:none}
+  /* 快速导入卡片内边距 */
+  .card.no-scale{padding:16px 14px}
+  .card.no-scale textarea{min-height:96px;font-size:16px}
+  .header h1{font-size:1.2rem}
+  .header .subtitle{font-size:0.55rem;letter-spacing:0.06em}
+  .lottery-rolling{font-size:clamp(1.6rem,10.5vw,2.8rem)}
+}
+
+/* ---------- 手机横屏：高度只有 300~450，省掉装饰性留白 ---------- */
+@media(max-width:900px) and (max-height:460px){
+  .header{padding:14px 12px 8px}
+  .header h1{font-size:1.1rem}
+  .staff-lines{display:none}
+  .cards-grid{margin:10px auto;gap:8px}
+  .cards-grid .card{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:12px 14px;min-height:0;
+  }
+  .cards-grid .card .card-icon{font-size:1.7rem;margin:0;line-height:1}
+  .cards-grid .card .card-title{font-size:1.02rem}
+  .header .mx-symbols{display:none}
+  .lottery-rolling{font-size:clamp(1.4rem,7vh,2.4rem)}
+  .page-header{margin-bottom:10px;padding-bottom:8px}
+}
+
+/* History bottom button */
+.history-entry{
+  text-align:center;
+  margin-top:40px;
+  padding-top:24px;
+  border-top:1px solid var(--border);
+}
+/* ===== 点击反馈 ===== */
+/* 去除默认高亮和长按菜单 */
+.btn, .card, .back-btn, .btn-danger-sm, .perf-type-select, .toolbar button,
+.feedback-toggle, .mode-btn, .sight-repeat-toggle,
+.muted-toggle, .btn-xs, .btn-sm, input, textarea, select {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* 统一缩放反馈 - 0.08s快速回弹，不卡顿 */
+.btn:active, .card:not(.no-scale):active, .back-btn:active, .btn-danger-sm:active,
+.mode-btn:active, .sight-repeat-toggle:active, .muted-toggle:active, .feedback-toggle:active,
+.btn-pink:active, .btn-cyan:active, .btn-gold:active, .btn-xs:active, .btn-sm:active {
+  transform: scale(0.94);
+  transition: transform 0.08s ease-out;
+}
+/* 快速导入card：卡片本身永不缩放，只有内部按钮缩放 */
+.card.no-scale:active { transform: none; }
+.card.no-scale textarea { transition: none; }
+
+/* 输入框聚焦样式 */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(139,92,246,0.18);
+}
+
+/* ============================================================
+   手动选曲 PICKER
+   ============================================================ */
+.result-cell.clickable{cursor:pointer;transition:transform .15s,box-shadow .2s}
+.result-cell.clickable:not(.placeholder):hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(245,158,11,.35)}
+.result-cell.clickable.placeholder:hover{border-color:rgba(245,158,11,.45);color:var(--gold-bright)}
+.pick-opt{
+  display:block;width:100%;padding:12px 16px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);font-size:0.95rem;
+  cursor:pointer;text-align:left;font-family:inherit;
+  transition:all var(--transition);
+}
+.pick-opt:hover{background:var(--surface-hover);border-color:rgba(255,255,255,.25);transform:translateX(3px)}
+.pick-opt.current{
+  border-color:var(--gold);
+  color:var(--gold-bright);
+  font-weight:700;
+  background:rgba(245,158,11,.12);
+  box-shadow:0 0 0 2px rgba(245,158,11,.18);
+}
+
+/* ===== 震动+音效全局开关 ===== */
+.feedback-toggle {
+  position: fixed;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 9999;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  color: var(--text);
+  font-size: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.feedback-toggle:active { transform: scale(0.92); }
+
+/* ============================================================
+   音乐氛围增强（纯装饰层，不参与任何业务逻辑）
+   ============================================================ */
+/* --- 五线谱背景 --- */
+.mx-staff{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;contain:paint}
+.mx-staff .mx-group{
+  position:absolute;left:-10%;width:120%;
+  display:flex;flex-direction:column;gap:9px;
+}
+.mx-staff .mx-group span{
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(196,181,253,.20) 18%,rgba(244,114,182,.13) 50%,rgba(34,211,238,.17) 82%,transparent);
+  animation:mxGlow 7s ease-in-out infinite;
+}
+.mx-staff .mx-group span:nth-child(1){animation-delay:0s}
+.mx-staff .mx-group span:nth-child(2){animation-delay:.4s}
+.mx-staff .mx-group span:nth-child(3){animation-delay:.8s}
+.mx-staff .mx-group span:nth-child(4){animation-delay:1.2s}
+.mx-staff .mx-group span:nth-child(5){animation-delay:1.6s}
+.mx-staff .mx-group:nth-child(1){top:12%;opacity:.55;animation:mxSlide 48s ease-in-out infinite}
+.mx-staff .mx-group:nth-child(2){top:40%;opacity:.36;animation:mxSlide 60s ease-in-out infinite reverse}
+.mx-staff .mx-group:nth-child(3){top:70%;opacity:.45;animation:mxSlide 54s ease-in-out infinite}
+.mx-staff .mx-group:nth-child(4){top:90%;opacity:.28;animation:mxSlide 66s ease-in-out infinite reverse}
+@keyframes mxSlide{0%{transform:translateX(-3%)}50%{transform:translateX(3%)}100%{transform:translateX(-3%)}}
+@keyframes mxGlow{0%,100%{opacity:.55}50%{opacity:1}}
+
+/* --- 飘动音符 --- */
+.mx-notes{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;contain:paint}
+.mx-notes i{
+  position:absolute;font-style:normal;line-height:1;opacity:0;
+  will-change:transform,opacity;
+  animation-name:mxDrift;animation-timing-function:linear;animation-iteration-count:infinite;
+  text-shadow:0 0 14px currentColor;
+}
+@keyframes mxDrift{
+  0%{transform:translate3d(0,20px,0) rotate(0deg) scale(.75);opacity:0}
+  12%{opacity:.68}
+  50%{transform:translate3d(28px,-48vh,0) rotate(160deg) scale(1.05)}
+  86%{opacity:.34}
+  100%{transform:translate3d(-22px,-96vh,0) rotate(330deg) scale(.85);opacity:0}
+}
+
+/* --- 标题流光 + 音符摆动 --- */
+.header h1{background-size:220% auto;animation:mxShine 7s linear infinite}
+@keyframes mxShine{0%{background-position:0% center}100%{background-position:220% center}}
+.header .mx-symbols{color:var(--accent1);text-shadow:0 0 16px rgba(168,85,247,.55)}
+.header .mx-symbols span{
+  display:inline-block;
+  animation:mxSway 3.2s ease-in-out infinite;
+}
+.header .mx-symbols span:nth-child(1){animation-delay:0s}
+.header .mx-symbols span:nth-child(2){animation-delay:.25s}
+.header .mx-symbols span:nth-child(3){animation-delay:.5s}
+.header .mx-symbols span:nth-child(4){animation-delay:.75s}
+.header .mx-symbols span:nth-child(5){animation-delay:1s}
+.header .mx-symbols span:nth-child(6){animation-delay:1.25s}
+.header .mx-symbols span:nth-child(7){animation-delay:1.5s}
+@keyframes mxSway{
+  0%,100%{transform:translateY(0) rotate(-8deg);opacity:.35}
+  50%{transform:translateY(-9px) rotate(8deg);opacity:.9}
+}
+
+/* --- 主界面卡片音乐化 --- */
+.cards-grid .card{
+  background-color:rgba(255,255,255,0.06);
+  background-image:repeating-linear-gradient(180deg,rgba(255,255,255,.075) 0 1px,transparent 1px 9px);
+  background-repeat:no-repeat;
+  background-size:100% 45px;
+  background-position:center calc(100% - 16px);
+}
+.cards-grid .card::before{background-size:220% 100%;animation:mxShine 4.5s linear infinite}
+.card:not(.no-scale):hover .card-icon{animation:mxIconPop .7s ease}
+@keyframes mxIconPop{
+  0%{transform:scale(1)}
+  25%{transform:scale(1.22) rotate(-10deg)}
+  55%{transform:scale(.94) rotate(7deg)}
+  80%{transform:scale(1.06) rotate(-3deg)}
+  100%{transform:scale(1)}
+}
+.card:not(.no-scale)::after{
+  content:'♪';
+  position:absolute;right:16px;bottom:-26px;
+  font-size:2.4rem;color:var(--accent1);opacity:0;
+  pointer-events:none;transition:opacity .35s ease,bottom .35s ease;
+}
+.card:not(.no-scale):hover::after{opacity:.28;bottom:10px}
+.cards-grid .card:nth-child(1)::after{content:'♩'}
+.cards-grid .card:nth-child(2)::after{content:'♫';color:var(--accent2)}
+.cards-grid .card:nth-child(3)::after{content:'♬';color:var(--accent3)}
+
+/* --- 五线谱上跑动的音符 --- */
+.staff-lines{position:relative;overflow:hidden}
+.staff-lines::after{
+  content:'♪';
+  position:absolute;left:-24px;top:-4px;
+  font-size:1.25rem;color:var(--accent2);opacity:.75;
+  animation:mxRun 5s linear infinite;
+}
+@keyframes mxRun{0%{left:-24px}100%{left:100%}}
+
+/* --- 模块页标题装饰 --- */
+.page-header h2::after{
+  content:'♪';
+  display:inline-block;margin-left:10px;
+  font-size:1.1rem;color:var(--accent1);opacity:.55;
+  animation:mxSway 2.8s ease-in-out infinite;
+}
+
+/* --- 点击音符 / 抽中迸发 --- */
+.mx-pop{
+  position:fixed;pointer-events:none;z-index:3000;
+  line-height:1;will-change:transform,opacity;
+  animation:mxPopUp .9s cubic-bezier(.2,.7,.3,1) forwards;
+}
+@keyframes mxPopUp{
+  0%{transform:translate(-50%,-50%) scale(.5);opacity:0}
+  20%{opacity:.95;transform:translate(-50%,-50%) scale(1.12)}
+  100%{transform:translate(-50%,-190%) scale(.8) rotate(28deg);opacity:0}
+}
+.mx-pop.mx-burst{animation:mxBurst 1.05s cubic-bezier(.15,.75,.3,1) forwards}
+@keyframes mxBurst{
+  0%{transform:translate(-50%,-50%) scale(.3);opacity:0}
+  15%{opacity:1;transform:translate(-50%,-50%) scale(1.18)}
+  100%{transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px))) scale(.55) rotate(210deg);opacity:0}
+}
+
+/* --- 抽签遮罩：旋转光晕 + 环绕音符 --- */
+#lotteryOverlay::before{
+  content:'';position:absolute;inset:-25%;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(168,85,247,.22),transparent 46%),
+    conic-gradient(from 0deg,
+      rgba(168,85,247,.28),rgba(236,72,153,.14),
+      rgba(6,182,212,.24),rgba(245,158,11,.14),rgba(168,85,247,.28));
+  opacity:0;transition:opacity .45s ease;
+  animation:mxSpin 16s linear infinite;
+}
+#lotteryOverlay.active::before{opacity:1}
+@keyframes mxSpin{to{transform:rotate(360deg)}}
+.mx-orbit{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.mx-orbit i{
+  position:absolute;left:50%;top:50%;font-style:normal;
+  opacity:0;will-change:transform,opacity;
+  text-shadow:0 0 18px currentColor;
+}
+#lotteryOverlay.active .mx-orbit i{animation:mxOrbit 4s linear infinite}
+@keyframes mxOrbit{
+  0%{transform:rotate(var(--a,0deg)) translateX(80px) scale(.5);opacity:0}
+  14%{opacity:.95}
+  55%{opacity:.85}
+  100%{transform:rotate(calc(var(--a,0deg) + 180deg)) translateX(min(46vw,420px)) scale(1.15);opacity:0}
+}
+
+/* --- 提示条音符前缀 --- */
+.toast::before{content:'♪ ';color:var(--gold-bright)}
+
+/* --- 万一用户自己按 Ctrl+P 打印，装饰层不要印到纸上 --- */
+@media print{
+  .mx-staff,.mx-notes,.mx-pop,.mx-orbit,.music-bg{display:none !important}
+  .header h1,.page-header h2::after,.cards-grid .card::before{animation:none !important}
+  body{background:#fff !important;color:#000 !important}
+}
+
+/* --- 尊重系统的「减少动态效果」设置 --- */
+@media(prefers-reduced-motion:reduce){
+  .mx-staff,.mx-notes,.mx-pop,.mx-orbit{display:none !important}
+  .header h1,.header .mx-symbols span,.page-header h2::after,
+  .staff-lines::after,.card:not(.no-scale):hover .card-icon,
+  #lotteryOverlay::before{animation:none !important}
+}
+</style>
+</head>
+<body>
+
+<!-- Floating music notes -->
+<div class="music-bg">
+  <span class="note">🎵</span><span class="note">🎶</span><span class="note">🎼</span>
+  <span class="note">🎵</span><span class="note">🎶</span><span class="note">🎼</span>
+  <span class="note">🎵</span><span class="note">🎶</span>
+</div>
+
+<!-- 音乐氛围层：五线谱 + 飘动音符（纯装饰，不吃点击） -->
+<div class="mx-staff" id="mxStaff" aria-hidden="true">
+  <div class="mx-group"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="mx-group"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="mx-group"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="mx-group"><span></span><span></span><span></span><span></span><span></span></div>
+</div>
+<div class="mx-notes" id="mxNotes" aria-hidden="true"></div>
+
+<!-- ============================================================
+     MAIN PAGE
+     ============================================================ -->
+<div class="page active" id="page-main">
+  <div class="container">
+    <div class="header">
+      <h1>江苏省音乐艺考抽签系统</h1>
+      <p class="subtitle">JIANGSU MUSIC ART EXAM · LOTTERY SYSTEM</p>
+      <div class="staff-lines">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="mx-symbols" style="margin-top:8px;font-size:1.6rem;letter-spacing:0.3em">
+        <span>♩</span><span>♪</span><span>♫</span><span>♬</span><span>♭</span><span>♮</span><span>♯</span>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card" onclick="navTo('edu')">
+        <span class="card-icon">📖</span>
+        <div class="card-title">音乐教育</div>
+      </div>
+      <div class="card" onclick="navTo('perf')">
+        <span class="card-icon">🎵</span>
+        <div class="card-title">音乐表演</div>
+      </div>
+      <div class="card" onclick="navTo('sight')">
+        <span class="card-icon">🎼</span>
+        <div class="card-title">视唱</div>
+      </div>
+    </div>
+
+    <!-- 快速导入 -->
+    <div class="card no-scale" style="margin:16px auto 0;max-width:1000px;text-align:center;border-color:rgba(34,197,94,0.25)">
+      <h3 style="font-size:1.15rem;margin-bottom:14px;text-align:center">⚡ 快速导入</h3>
+      <textarea id="quick-name-input" placeholder="张三&#10;李四, 肖邦夜曲Op.9, 贝多芬奏鸣曲, 我爱你中国, 长江之歌&#10;王五, 器乐1, 器乐2, 声乐1, 声乐2" style="width:100%;min-height:110px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:0.88rem;font-family:inherit;resize:vertical"></textarea>
+      <div class="toolbar quick-import-bar" style="margin-top:12px;justify-content:center">
+        <button class="btn btn-outline" onclick="previewQuickImport()" style="font-size:1rem;padding:11px 20px;border-color:rgba(148,163,184,0.5)">🔍 预览识别结果</button>
+        <button class="btn btn-primary" onclick="smartImportTo('edu')" style="font-size:1rem;padding:11px 20px">🚀 一键导入音乐教育</button>
+        <button class="btn btn-pink" onclick="smartImportTo('perf')" style="font-size:1rem;padding:11px 20px">🚀 一键导入音乐表演</button>
+        <button class="btn btn-cyan" onclick="smartImportTo('sight')" style="font-size:1rem;padding:11px 20px">🚀 一键导入视唱</button>
+      </div>
+    </div>
+
+    <div class="history-entry">
+      <button class="btn btn-outline" onclick="navTo('history')" style="font-size:1rem;padding:12px 32px;">
+        📋 历史记录
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MUSIC EDUCATION PAGE
+     ============================================================ -->
+<div class="page" id="page-edu">
+  <div class="container">
+    <div class="page-header">
+      <button class="back-btn" onclick="navTo('main')">← 返回</button>
+      <h2>📖 音乐教育</h2>
+    </div>
+
+    <div class="toolbar">
+      <div class="mode-selector" id="modeSelector-edu">
+        <button class="mode-btn active" data-mode="order-first" onclick="setDrawMode('edu','order-first')">📋 先抽顺序</button>
+        <button class="mode-btn" data-mode="pieces-first" onclick="setDrawMode('edu','pieces-first')">🎵 先抽曲目</button>
+        <button class="mode-btn" data-mode="combined" onclick="setDrawMode('edu','combined')">✨ 一起抽</button>
+      </div>
+      <span id="actionBtns-edu"></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-paste" onclick="showPasteInput('edu')">📋 粘贴导入</button>
+      <button class="btn btn-outline" onclick="addRow('edu')">＋ 添加行</button>
+      <button class="btn-danger-sm" onclick="deleteSelectedRows('edu')">🗑 删除选中</button>
+      <button class="btn btn-outline btn-sm" onclick="showClearMenu('edu')">🗑 清空</button>
+      <span style="display:inline-flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('edu','download')">📥 导出Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('edu','save')">💾 存到桌面</button>
+      </span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="table-edu">
+        <thead>
+          <tr>
+            <th style="width:30px"><input type="checkbox" id="selectAll-edu" onclick="toggleSelectAll('edu')" title="全选/取消"></th>
+            <th style="width:40px">出场顺序</th>
+            <th>序号</th>
+            <th>姓名</th>
+            <th>器乐曲目1</th>
+            <th>器乐曲目2</th>
+            <th>声乐曲目1</th>
+            <th>声乐曲目2</th>
+            <th style="min-width:100px">🎻 抽中器乐</th>
+            <th style="min-width:100px">🎤 抽中声乐</th>
+            <th style="width:80px">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MUSIC PERFORMANCE PAGE
+     ============================================================ -->
+<div class="page" id="page-perf">
+  <div class="container">
+    <div class="page-header">
+      <button class="back-btn" onclick="navTo('main')">← 返回</button>
+      <h2>🎵 音乐表演</h2>
+    </div>
+
+    <div class="toolbar">
+      <div class="mode-selector" id="modeSelector-perf">
+        <button class="mode-btn active" data-mode="order-first" onclick="setDrawMode('perf','order-first')">📋 先抽顺序</button>
+        <button class="mode-btn" data-mode="pieces-first" onclick="setDrawMode('perf','pieces-first')">🎵 先抽曲目</button>
+        <button class="mode-btn" data-mode="combined" onclick="setDrawMode('perf','combined')">✨ 一起抽</button>
+      </div>
+      <span id="actionBtns-perf"></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-paste" onclick="showPasteInput('perf')">📋 粘贴导入</button>
+      <button class="btn btn-outline" onclick="addRow('perf')">＋ 添加行</button>
+      <button class="btn-danger-sm" onclick="deleteSelectedRows('perf')">🗑 删除选中</button>
+      <button class="btn btn-outline btn-sm" onclick="showClearMenu('perf')">🗑 清空</button>
+      <span style="display:inline-flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('perf','download')">📥 导出Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('perf','save')">💾 存到桌面</button>
+      </span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="table-perf">
+        <thead>
+          <tr>
+            <th style="width:30px"><input type="checkbox" id="selectAll-perf" onclick="toggleSelectAll('perf')" title="全选/取消"></th>
+            <th style="width:40px">出场顺序</th>
+            <th>序号</th>
+            <th>类型</th>
+            <th>姓名</th>
+            <th>曲目1</th>
+            <th>曲目2</th>
+            <th style="min-width:100px">抽中曲目</th>
+            <th style="width:80px">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SIGHT-SINGING PAGE
+     ============================================================ -->
+<div class="page" id="page-sight">
+  <div class="container">
+    <div class="page-header">
+      <button class="back-btn" onclick="navTo('main')">← 返回</button>
+      <h2>🎼 视唱</h2>
+    </div>
+
+    <div class="sight-config">
+      <label>视唱条数：</label>
+      <input type="number" id="sightCount" value="20" min="1" max="200" onchange="saveSightCount()">
+      <span style="color:var(--text-dim);font-size:0.82rem">（随机为每位学生分配一条视唱）</span>
+      <span style="flex:1"></span>
+      <button class="sight-repeat-toggle active" id="sightRepeatBtn" onclick="toggleSightRepeat()" title="可重复：每个学生独立从1~N中随机抽">🔄 可重复</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="mode-selector" id="modeSelector-sight">
+        <button class="mode-btn active" data-mode="order-first" onclick="setDrawMode('sight','order-first')">📋 先抽顺序</button>
+        <button class="mode-btn" data-mode="pieces-first" onclick="setDrawMode('sight','pieces-first')">🎵 先抽视唱</button>
+        <button class="mode-btn" data-mode="combined" onclick="setDrawMode('sight','combined')">✨ 一起抽</button>
+      </div>
+      <span id="actionBtns-sight"></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-paste" onclick="showPasteInput('sight')">📋 粘贴导入</button>
+      <button class="btn btn-outline" onclick="addRow('sight')">＋ 添加行</button>
+      <button class="btn-danger-sm" onclick="deleteSelectedRows('sight')">🗑 删除选中</button>
+      <button class="btn btn-outline btn-sm" onclick="showClearMenu('sight')">🗑 清空</button>
+      <span style="display:inline-flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('sight','download')">📥 导出Excel</button>
+        <button class="btn btn-outline btn-sm" onclick="exportExcel('sight','save')">💾 存到桌面</button>
+      </span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="table-sight">
+        <thead>
+          <tr>
+            <th style="width:30px"><input type="checkbox" id="selectAll-sight" onclick="toggleSelectAll('sight')" title="全选/取消"></th>
+            <th style="width:40px">出场顺序</th>
+            <th>序号</th>
+            <th>姓名</th>
+            <th>抽中视唱</th>
+            <th style="width:80px">操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     HISTORY PAGE
+     ============================================================ -->
+<div class="page" id="page-history">
+  <div class="container">
+    <div class="page-header">
+      <button class="back-btn" onclick="navTo('main')">← 返回</button>
+      <h2>📋 历史记录</h2>
+    </div>
+    <div id="history-content">
+      <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <p>暂无历史记录</p>
+        <p style="font-size:0.85rem;margin-top:4px">完成抽签后会自动保存</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     LOTTERY ANIMATION OVERLAY
+     ============================================================ -->
+<div class="lottery-overlay" id="lotteryOverlay">
+  <div class="lottery-display">
+    <div class="lottery-rolling" id="lotteryRolling">--</div>
+    <div class="lottery-label" id="lotteryLabel"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     CLEAR MENU MODAL
+     ============================================================ -->
+<div class="modal-overlay" id="clearModal">
+  <div class="modal">
+    <h3>🗑 清空选项</h3>
+    <button class="menu-item" onclick="clearData('all')">🗑 清空全部</button>
+    <button class="menu-item" onclick="clearData('names')">👤 仅清空姓名</button>
+    <button class="menu-item" onclick="clearData('pieces')">🎵 仅清空曲目</button>
+    <button class="menu-item" onclick="clearData('results')">🔄 仅清空结果（保留数据重新抽）</button>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeClearModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     HISTORY DETAIL MODAL
+     ============================================================ -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" style="max-width:700px">
+    <h3 id="detailTitle">📋 详情</h3>
+    <div class="detail-table-wrap" id="detailContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDetailModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PASTE PREVIEW MODAL
+     ============================================================ -->
+<div class="modal-overlay" id="pastePreviewModal">
+  <div class="modal" style="max-width:700px">
+    <h3>📋 识别结果预览</h3>
+    <div id="pastePreviewInfo" class="paste-info"></div>
+    <div class="detail-table-wrap" id="pastePreviewContent"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      <button class="btn btn-xs btn-outline" id="pasteTypeBtn-edu" onclick="changePasteModule('edu')">📖 音乐教育</button>
+      <button class="btn btn-xs btn-outline" id="pasteTypeBtn-perf" onclick="changePasteModule('perf')">🎵 音乐表演</button>
+      <button class="btn btn-xs btn-outline" id="pasteTypeBtn-sight" onclick="changePasteModule('sight')">🎼 视唱</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closePastePreview()">取消</button>
+      <button class="btn btn-primary" onclick="confirmPaste()">✅ 确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MANUAL PIECE PICKER MODAL (手动改选曲目)
+     ============================================================ -->
+<div class="modal-overlay" id="pickerModal">
+  <div class="modal" style="max-width:440px">
+    <h3 id="pickerTitle">✋ 手动选曲</h3>
+    <p id="pickerSub" style="text-align:center;color:var(--text-dim);font-size:0.86rem;margin-bottom:14px"></p>
+    <div id="pickerOptions" style="display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closePicker()">取消</button>
+      <button class="btn btn-gold" onclick="pickerRedraw()">🎲 随机重抽</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PASTE INPUT MODAL (Manual paste with textarea)
+     ============================================================ -->
+<div class="modal-overlay" id="pasteInputModal">
+  <div class="modal" style="max-width:650px">
+    <h3>📋 粘贴导入</h3>
+    <p style="color:var(--text-dim);font-size:0.85rem;text-align:center;margin-bottom:8px">
+      在下方文本框中粘贴数据（Ctrl+V），支持姓名+曲目的多行/制表符/逗号分隔格式
+    </p>
+    <textarea class="paste-textarea" id="pasteInputTextarea" placeholder="张三&#10;李四, 肖邦夜曲Op.9, 贝多芬奏鸣曲, 我爱你中国, 长江之歌&#10;王五, 器乐1, 器乐2, 声乐1, 声乐2"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closePasteInput()">取消</button>
+      <button class="btn btn-outline" onclick="processPasteInput()">🔍 预览识别结果</button>
+      <button class="btn btn-primary" onclick="pasteSmartImport()">🚀 一键导入本模块</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+const STATE = {
+  currentPage: 'main',
+  currentClearModule: 'edu',
+  muted: { edu: false, perf: false, sight: false },
+  sightCount: 20,
+  sightRepeatable: true,
+  drawMode: { edu: 'order-first', perf: 'order-first' },
+  pasteInputModule: null, // which module the paste input was opened from
+  data: {
+    edu: [],
+    perf: [],
+    sight: []
+  },
+  pastePreview: {
+    parsedRows: [],
+    targetModule: null
+  }
+};
+
+// Load from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('jsme_lottery_v6');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.data && typeof parsed.data === 'object') {
+        // 逐个模块合并，旧数据里少一个模块也不会把表格搞没
+        ['edu', 'perf', 'sight'].forEach(function (m) {
+          if (Array.isArray(parsed.data[m])) STATE.data[m] = parsed.data[m];
+        });
+        STATE.data.perf.forEach(r => {
+          if (!r.perfType) r.perfType = 'instrumental';
+        });
+      }
+      if (parsed.muted) STATE.muted = { ...STATE.muted, ...parsed.muted };
+      if (parsed.sightCount != null) STATE.sightCount = parsed.sightCount;
+      if (parsed.sightRepeatable != null) STATE.sightRepeatable = parsed.sightRepeatable;
+      if (parsed.drawMode) STATE.drawMode = { ...STATE.drawMode, ...parsed.drawMode };
+    }
+  } catch(e) { console.warn('loadState error:', e); }
+}
+// Debounced saveState to reduce localStorage writes
+let _saveTimer = null;
+function _writeStateNow() {
+  _saveTimer = null;
+  try {
+    localStorage.setItem('jsme_lottery_v6', JSON.stringify({
+      data: STATE.data,
+      muted: STATE.muted,
+      sightCount: STATE.sightCount,
+      sightRepeatable: STATE.sightRepeatable,
+      drawMode: STATE.drawMode
+    }));
+  } catch(e) { console.warn('saveState error:', e); }
+}
+function saveState() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(_writeStateNow, 200);
+}
+// 防抖 200ms 内切后台 / 关页面 / 刷新：立刻落盘，避免最后一步抽签结果丢失
+function flushSaveState() {
+  if (_saveTimer) { clearTimeout(_saveTimer); _writeStateNow(); }
+}
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushSaveState();
+});
+window.addEventListener('pagehide', flushSaveState);
+window.addEventListener('beforeunload', flushSaveState);
+
+// Row model
+function makeEduRow(name, ip1, ip2, vp1, vp2) {
+  return {
+    name: name || '',
+    ip1: ip1 || '', ip2: ip2 || '',
+    vp1: vp1 || '', vp2: vp2 || '',
+    order: null, ipResult: null, vpResult: null
+  };
+}
+function makePerfRow(name, p1, p2, perfType) {
+  return {
+    name: name || '',
+    perfType: perfType || 'instrumental',
+    p1: p1 || '', p2: p2 || '',
+    order: null, result: null
+  };
+}
+function makeSightRow(name) {
+  return {
+    name: name || '',
+    order: null, sightResult: null
+  };
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+// 快速导入姓名：粘贴名字→选模块→填入
+function quickImportNames(module) {
+  const text = document.getElementById('quick-name-input').value.trim();
+  if (!text) { toast('请先输入姓名'); return; }
+  const names = text.split(/\n/).map(s => s.trim()).filter(s => s);
+  if (names.length === 0) { toast('未识别到姓名'); return; }
+  
+  // 清空目标模块旧数据，填入新姓名
+  STATE.data[module] = names.map(name => {
+    if (module === 'edu') return makeEduRow(name);
+    if (module === 'perf') return makePerfRow(name);
+    return makeSightRow(name);
+  });
+  saveState();
+  
+  const label = module === 'edu' ? '音乐教育' : module === 'perf' ? '音乐表演' : '视唱';
+  toast(`✅ ${label}已导入 ${names.length} 人`);
+}
+
+// ============================================================
+// 智能导入：自动识别 姓名 / 器乐曲目 / 声乐曲目
+// ============================================================
+const VOCAL_RE = /歌|唱|声乐|咏叹|艺术歌曲|歌剧|清唱|康塔塔|声乐套曲/;
+const INSTR_RE = /奏鸣|练习|协奏|前奏|赋格|夜曲|圆舞|叙事|幻想|即兴|谐谑|变奏|组曲|序曲|马祖卡|波兰|狂想|回旋|随想|托卡塔|创意|小步舞|摇篮|进行曲|器乐|钢琴|小提琴|中提琴|大提琴|二胡|古筝|琵琶|长笛|单簧|双簧|萨克斯|小号|圆号|吉他|手风琴|扬琴|竹笛|笙|唢呐|Op\.?\s*\d|No\.?\s*\d|BWV|KV|作品\s*\d/i;
+
+function classifyPiece(s) {
+  const v = VOCAL_RE.test(s);
+  const i = INSTR_RE.test(s);
+  if (v && !i) return 'vp';
+  if (i && !v) return 'ip';
+  if (!v && !i) {
+    // 带调号的曲名（「降A 那就是我」「G 芦花」）基本都是声乐曲
+    if (/^(降|升)?[A-G][b#]?[\s　]+\S/.test(s)) return 'vp';
+    if (/(大调|小调)/.test(s)) return 'vp';
+    // 声乐作品里常见的字眼
+    if (/民歌|艺术歌曲|古诗词|在那|我的|我爱你|母亲|祖国|故乡|家乡|草原|茉莉|送别|怀念|雪花|大海|长江|黄河|情歌|恋歌|思乡/.test(s)) return 'vp';
+  }
+  return 'unknown';
+}
+
+// 判断某个学生在音乐表演方向上是声乐还是器乐
+function _guessPerfType(student) {
+  if (student.type) return student.type;
+  if (student.vp.length && !student.ip.length) return 'vocal';
+  if (student.ip.length && !student.vp.length) return 'instrumental';
+  let v = 0, i = 0;
+  student.vp.concat(student.ip).forEach(function (p) {
+    const k = classifyPiece(p);
+    if (k === 'vp') v++;
+    else if (k === 'ip') i++;
+  });
+  return v > i ? 'vocal' : 'instrumental';
+}
+
+function splitImportLine(line) {
+  if (line.indexOf('\t') >= 0) return line.split('\t');
+  if (/[,，、;；|｜]/.test(line)) return line.split(/[,，、;；|｜]/);
+  if (/\s{2,}/.test(line)) return line.split(/\s{2,}/);
+  return line.split(/\s+/);
+}
+
+function isHeaderLine(cols) {
+  if (cols.length < 2) return false;
+  // 必须是第一列就写着「姓名/序号/考号」这类表头字眼才算表头行，
+  // 否则「张三, 器乐曲目1, 器乐曲目2」这种学生行会被误当成表头吃掉
+  const first = String(cols[0] || '');
+  if (!/姓名|名字|学生|序号|编号|考号|学号/.test(first)) return false;
+  // 后面还得有曲目/类型相关的列，才更像真正的数据表头
+  return cols.slice(1).some(function(c) {
+    return /姓名|名字|学生|序号|器乐|声乐|曲目|作品|曲名|类型|方向|主项/.test(c);
+  });
+}
+
+// 找出姓名所在的列：跳过序号列，优先像姓名的那一列
+function pickNameIdx(cols, headerMap) {
+  if (headerMap) {
+    const hi = headerMap.indexOf('name');
+    if (hi >= 0 && hi < cols.length) return hi;
+  }
+  let idx = -1;
+  for (let i = 0; i < cols.length; i++) {
+    if (/^\d+[.、)\s]*$/.test(cols[i])) continue;
+    idx = i; break;
+  }
+  if (idx < 0) idx = 0;
+  // 首列看着像曲目不像姓名时，再找一个像姓名的
+  if (isLikelyPiece(cols[idx]) && !isLikelyName(cols[idx])) {
+    for (let i = 0; i < cols.length; i++) {
+      if (i !== idx && isLikelyName(cols[i])) return i;
+    }
+  }
+  return idx;
+}
+
+function parseImportRows(text) {
+  let rows = text.replace(/\r/g, '').split('\n')
+    .map(function(s) { return s.trim(); })
+    .filter(function(s) { return s; })
+    .map(function(s) { return splitImportLine(s).map(function(c) { return (c || '').trim(); }).filter(function(c) { return c; }); });
+
+  if (rows.length === 0) return [];
+
+  // ---- 表头行（可选）：明确指定每列是姓名/器乐/声乐 ----
+  let headerMap = null;
+  if (isHeaderLine(rows[0])) {
+    headerMap = rows[0].map(function(h) {
+      if (/姓名|名字|学生/.test(h)) return 'name';
+      if (/序号|编号|考号|学号/.test(h)) return 'seq';
+      if (/类型|方向|类别|专业|主项|声部/.test(h)) return 'ptype';
+      if (/声乐/.test(h)) return 'vp';
+      if (/器乐/.test(h)) return 'ip';
+      return 'gen';
+    });
+    rows = rows.slice(1);
+  }
+
+  // ---- 逐行解析 ----
+  const students = [];
+  rows.forEach(function(cols) {
+    if (cols.length === 0) return;
+
+    const nameIdx = pickNameIdx(cols, headerMap);
+    const name = (cols[nameIdx] || '').replace(/^\d+[.、)\s]+/, '').trim();
+    if (!name) return;
+
+    const ip = [], vp = [], gen = [];
+    let type = null;
+    cols.forEach(function(c, i) {
+      if (i === nameIdx) return;
+      if (/^\d+[.、)\s]*$/.test(c)) return;   // 序号列不算曲目
+      if (headerMap && headerMap[i] === 'seq') return;
+      // 明确写明「声乐」「器乐」的单元格（或表头专门的类型列）当作方向，不算曲目
+      if ((headerMap && headerMap[i] === 'ptype') || /^(声乐|器乐|演唱|演奏)$/.test(c)) {
+        type = /声乐|演唱/.test(c) ? 'vocal' : 'instrumental';
+        return;
+      }
+      let kind;
+      if (headerMap) kind = headerMap[i] || 'gen';
+      else kind = classifyPiece(c);
+      if (kind === 'name') return;
+      const item = { i: i, v: c };
+      if (kind === 'vp') vp.push(item);
+      else if (kind === 'ip') ip.push(item);
+      else gen.push(item);
+    });
+
+    // 未分类曲目按艺考表顺序补空位：器乐1 → 器乐2 → 声乐1 → 声乐2
+    gen.forEach(function(item) {
+      if (ip.length < 2) ip.push(item);
+      else if (vp.length < 2) vp.push(item);
+    });
+
+    // 还原原始列顺序
+    ip.sort(function(a, b) { return a.i - b.i; });
+    vp.sort(function(a, b) { return a.i - b.i; });
+
+    students.push({
+      name: name,
+      type: type,
+      ip: ip.map(function(x) { return x.v; }),
+      vp: vp.map(function(x) { return x.v; })
+    });
+  });
+
+  return students;
+}
+
+// 一键导入到指定模块（教育 / 表演 / 视唱）
+// 把一批学生填进模块表格：
+// 从第 1 行开始覆盖写入 → 人多就往下加行 → 末尾多余的空行清掉
+function fillModuleRows(module, rows) {
+  const data = STATE.data[module];
+  // 名单一变，旧的出场顺序就不作数了（否则新人和旧人的序号会撞在一起）
+  data.forEach(function (r) { r.order = null; });
+  for (let i = 0; i < rows.length; i++) {
+    const src = rows[i];
+    if (i < data.length) {
+      const dst = data[i];
+      dst.name = src.name || '';
+      dst.order = null;
+      if (module === 'edu') {
+        dst.ip1 = src.ip1 || ''; dst.ip2 = src.ip2 || '';
+        dst.vp1 = src.vp1 || ''; dst.vp2 = src.vp2 || '';
+        dst.ipResult = null; dst.vpResult = null;
+        dst.ipManual = false; dst.vpManual = false;
+      } else if (module === 'perf') {
+        dst.p1 = src.p1 || ''; dst.p2 = src.p2 || '';
+        if (src.perfType) dst.perfType = src.perfType;
+        dst.result = null; dst.manual = false;
+      } else {
+        dst.sightResult = null; dst.sightManual = false;
+      }
+    } else {
+      data.push(src);
+    }
+  }
+  // 导入条数之后、仍然完全空白的行直接删掉，不留空行
+  for (let i = data.length - 1; i >= rows.length; i--) {
+    const r = data[i];
+    const blank = !r.name && (module === 'edu' ? (!r.ip1 && !r.ip2 && !r.vp1 && !r.vp2)
+      : module === 'perf' ? (!r.p1 && !r.p2) : true);
+    if (blank) data.splice(i, 1);
+  }
+}
+
+// text 不传时默认取主界面快速导入框的内容
+function smartImportTo(module, text) {
+  if (text == null) {
+    const el = document.getElementById('quick-name-input');
+    text = el ? el.value : '';
+  }
+  text = String(text || '');
+  if (!text.trim()) { toast('请先粘贴或输入内容'); return; }
+
+  const students = parseImportRows(text);
+  if (students.length === 0) { toast('没有识别到学生，请检查格式'); return; }
+
+  const pieceCount = students.reduce(function(n, s) { return n + s.ip.length + s.vp.length; }, 0);
+  let extra = '';
+  let rows = [];
+
+  if (module === 'edu') {
+    rows = students.map(function(s) {
+      return makeEduRow(s.name, s.ip[0] || '', s.ip[1] || '', s.vp[0] || '', s.vp[1] || '');
+    });
+    if (pieceCount) {
+      const nIP = students.filter(function(s) { return s.ip.length; }).length;
+      const nVP = students.filter(function(s) { return s.vp.length; }).length;
+      extra = ' · 器乐 ' + nIP + ' 人 / 声乐 ' + nVP + ' 人';
+    }
+  } else if (module === 'perf') {
+    let nVocal = 0, nInstr = 0;
+    rows = students.map(function(s) {
+      // 每个学生各自判断：先看有没有写明方向，再看他自己的曲目
+      const pType = _guessPerfType(s);
+      if (pType === 'vocal') nVocal++; else nInstr++;
+      const pieces = s.ip.concat(s.vp);
+      return makePerfRow(s.name, pieces[0] || '', pieces[1] || '', pType);
+    });
+    if (pieceCount) extra = ' · 声乐 ' + nVocal + ' 人 / 器乐 ' + nInstr + ' 人';
+  } else {
+    rows = students.map(function(s) { return makeSightRow(s.name); });
+  }
+
+  fillModuleRows(module, rows);
+
+  saveState();
+  const label = module === 'edu' ? '音乐教育' : module === 'perf' ? '音乐表演' : '视唱';
+  toast('✅ ' + label + '已导入 ' + students.length + ' 人' + extra);
+  navTo(module);
+}
+
+function navTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('page-' + page);
+  if (target) target.classList.add('active');
+  STATE.currentPage = page;
+  if (page === 'edu') renderEdu();
+  else if (page === 'perf') renderPerf();
+  else if (page === 'sight') {
+    document.getElementById('sightCount').value = STATE.sightCount;
+    updateSightRepeatBtn();
+    // Sync mode selector
+    const sightMode = STATE.drawMode.sight || 'order-first';
+    document.querySelectorAll('#modeSelector-sight .mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === sightMode);
+    });
+    renderSight();
+  }
+  else if (page === 'history') renderHistory();
+  // 音效/震动开关只在主界面显示，各模块页不再重复出现
+  const ft = document.getElementById('feedbackToggle');
+  if (ft) ft.style.display = (page === 'main') ? '' : 'none';
+  window.scrollTo(0, 0);
+}
+
+// ============================================================
+// RENDER: Music Education
+// ============================================================
+function ensureMinRows(module) {
+  if (STATE.data[module].length === 0) {
+    for (let i = 0; i < 3; i++) {
+      if (module === 'edu') STATE.data[module].push(makeEduRow(''));
+      else if (module === 'perf') STATE.data[module].push(makePerfRow(''));
+      else STATE.data[module].push(makeSightRow(''));
+    }
+  }
+}
+
+function renderEdu() {
+  _renumberOrders('edu');
+  ensureMinRows('edu');
+  const mode = STATE.drawMode.edu || 'order-first';
+  document.querySelectorAll('#modeSelector-edu .mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  const data = STATE.data.edu;
+  const tbody = document.querySelector('#table-edu tbody');
+  let html = '';
+  const hasOrder = data.some(r => r.order != null);
+  const sortedData = hasOrder
+    ? [...data].map((r, origIdx) => ({ row: r, origIdx })).sort((a, b) => {
+        const ao = a.row.order != null ? a.row.order : 9999;
+        const bo = b.row.order != null ? b.row.order : 9999;
+        if (ao !== bo) return ao - bo;
+        return a.origIdx - b.origIdx;
+      })
+    : data.map((r, origIdx) => ({ row: r, origIdx }));
+  sortedData.forEach((item, displayIdx) => {
+    const row = item.row;
+    const idx = item.origIdx;
+    html += `<tr id="edu-row-${idx}" class="${row.ipResult || row.vpResult ? 'row-highlight' : ''}">
+      <td><input type="checkbox" class="row-checkbox" data-module="edu" data-idx="${idx}" onclick="toggleRowCheck('edu',${idx},this)"></td>
+      <td><input class="order-input" value="${row.order != null ? row.order : ''}" readonly title="出场顺序"></td>
+      <td>${displayIdx + 1}</td>
+      <td><input value="${escHtml(row.name)}" data-col="name" data-idx="${idx}" oninput="onCellChange('edu',${idx},'name',this.value)" placeholder="输入姓名"></td>
+      <td><input value="${escHtml(row.ip1)}" data-col="ip1" data-idx="${idx}" oninput="onCellChange('edu',${idx},'ip1',this.value)" placeholder="器乐曲目1"></td>
+      <td><input value="${escHtml(row.ip2)}" data-col="ip2" data-idx="${idx}" oninput="onCellChange('edu',${idx},'ip2',this.value)" placeholder="器乐曲目2"></td>
+      <td><input value="${escHtml(row.vp1)}" data-col="vp1" data-idx="${idx}" oninput="onCellChange('edu',${idx},'vp1',this.value)" placeholder="声乐曲目1"></td>
+      <td><input value="${escHtml(row.vp2)}" data-col="vp2" data-idx="${idx}" oninput="onCellChange('edu',${idx},'vp2',this.value)" placeholder="声乐曲目2"></td>
+      <td>${renderEduResultCell(row, idx, 'ip')}</td>
+      <td>${renderEduResultCell(row, idx, 'vp')}</td>
+      <td>${renderEduOpCell(row, idx, mode)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  updateActionButtons('edu');
+  updateMuteBtn('edu');
+}
+
+function renderEduResultCell(row, idx, type) {
+  const result = type === 'ip' ? row.ipResult : row.vpResult;
+  const hasPieces = type === 'ip' ? (row.ip1 || row.ip2) : (row.vp1 || row.vp2);
+  const colorClass = type === 'ip' ? 'gold' : 'pink';
+  const label = type === 'ip' ? '🎻 ' : '🎤 ';
+  const isManual = type === 'ip' ? row.ipManual : row.vpManual;
+  if (result) {
+    return `<span class="result-cell ${colorClass} clickable" onclick="togglePiece('edu',${idx},'${type}')" title="点一下换另一首">${label}${escHtml(result)}</span>`;
+  } else if (!hasPieces) {
+    return `<span class="result-cell placeholder">—</span>`;
+  } else {
+    return `<span class="result-cell placeholder clickable" onclick="togglePiece('edu',${idx},'${type}')" title="点一下直接选曲">未抽</span>`;
+  }
+}
+
+function renderEduOpCell(row, idx, mode) {
+  const data = STATE.data.edu;
+  const anyOrder = data.some(r => r.order != null);
+
+  const hasIP = row.ip1 || row.ip2;
+  const hasVP = row.vp1 || row.vp2;
+  const needIP = hasIP && row.ipResult == null;
+  const needVP = hasVP && row.vpResult == null;
+  const doneIP = hasIP && !needIP;
+  const doneVP = hasVP && !needVP;
+
+  // Build buttons based on state
+  let btns = '';
+  const showDraw = (mode === 'order-first') ? (row.order != null) : (mode === 'pieces-first' || mode === 'combined' || row.order != null);
+
+  if (mode === 'order-first' && row.order == null) {
+    return `<span class="result-badge pending">先抽顺序</span>`;
+  }
+  if (mode === 'combined' && row.order == null) {
+    return `<span class="result-badge pending">点击"全部抽"</span>`;
+  }
+
+  // Has order (or pieces-first mode where we can draw pieces without order)
+  if (hasIP) {
+    if (needIP) btns += `<button class="btn btn-xs btn-primary" onclick="drawOne('edu',${idx},'ip')" style="margin:1px">🎻抽器乐</button> `;
+    else btns += `<button class="btn btn-xs btn-outline" onclick="redrawOne('edu',${idx},'ip')" style="margin:1px" title="重新抽器乐">🔄重抽🎻</button> `;
+  }
+  if (hasVP) {
+    if (needVP) btns += `<button class="btn btn-xs btn-pink" onclick="drawOne('edu',${idx},'vp')" style="margin:1px">🎤抽声乐</button> `;
+    else btns += `<button class="btn btn-xs btn-outline" onclick="redrawOne('edu',${idx},'vp')" style="margin:1px" title="重新抽声乐">🔄重抽🎤</button> `;
+  }
+  if (!hasIP && !hasVP) btns += `<span style="color:var(--text-dim);font-size:0.78rem">无曲目</span>`;
+  return btns;
+}
+
+// ============================================================
+// RENDER: Music Performance (MERGED table with type column)
+// ============================================================
+function renderPerf() {
+  _renumberOrders('perf');
+  ensureMinRows('perf');
+  const mode = STATE.drawMode.perf || 'order-first';
+  document.querySelectorAll('#modeSelector-perf .mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  const data = STATE.data.perf;
+  const tbody = document.querySelector('#table-perf tbody');
+  let html = '';
+  const hasOrderPerf = data.some(r => r.order != null);
+  const sortedDataPerf = hasOrderPerf
+    ? [...data].map((r, origIdx) => ({ row: r, origIdx })).sort((a, b) => {
+        const ao = a.row.order != null ? a.row.order : 9999;
+        const bo = b.row.order != null ? b.row.order : 9999;
+        if (ao !== bo) return ao - bo;
+        return a.origIdx - b.origIdx;
+      })
+    : data.map((r, origIdx) => ({ row: r, origIdx }));
+  sortedDataPerf.forEach((item, displayIdx) => {
+    const row = item.row;
+    const idx = item.origIdx;
+    const typeLabel = row.perfType === 'vocal' ? '声乐' : '器乐';
+    const typeClass = row.perfType === 'vocal' ? 'type-vocal' : 'type-instrumental';
+    html += `<tr id="perf-row-${idx}" class="${row.result ? 'row-highlight' : ''}">
+      <td><input type="checkbox" class="row-checkbox" data-module="perf" data-idx="${idx}" onclick="toggleRowCheck('perf',${idx},this)"></td>
+      <td><input class="order-input" value="${row.order != null ? row.order : ''}" readonly></td>
+      <td>${displayIdx + 1}</td>
+      <td>
+        <select class="perf-type-select ${typeClass}" onchange="onPerfTypeChange(${idx}, this.value)">
+          <option value="instrumental" ${row.perfType === 'instrumental' ? 'selected' : ''}>🎻 器乐</option>
+          <option value="vocal" ${row.perfType === 'vocal' ? 'selected' : ''}>🎤 声乐</option>
+        </select>
+      </td>
+      <td><input value="${escHtml(row.name)}" oninput="onCellChange('perf',${idx},'name',this.value)" placeholder="输入姓名"></td>
+      <td><input value="${escHtml(row.p1)}" oninput="onCellChange('perf',${idx},'p1',this.value)" placeholder="${typeLabel}曲目1"></td>
+      <td><input value="${escHtml(row.p2)}" oninput="onCellChange('perf',${idx},'p2',this.value)" placeholder="${typeLabel}曲目2"></td>
+      <td>${renderPerfResultCell(row, idx)}</td>
+      <td>${renderPerfOpCell(row, idx, mode)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  updateActionButtons('perf');
+  updateMuteBtn('perf');
+}
+
+function onPerfTypeChange(idx, value) {
+  STATE.data.perf[idx].perfType = value;
+  saveState();
+  renderPerf();
+}
+
+function renderPerfResultCell(row, idx) {
+  const hasPieces = row.p1 || row.p2;
+  const colorClass = row.perfType === 'vocal' ? 'pink' : 'gold';
+  const label = row.perfType === 'vocal' ? '🎤 ' : '🎻 ';
+  if (row.result) {
+    return `<span class="result-cell ${colorClass} clickable" onclick="togglePiece('perf',${idx})" title="点一下换另一首">${label}${escHtml(row.result)}</span>`;
+  } else if (!hasPieces) {
+    return `<span class="result-cell placeholder">—</span>`;
+  } else {
+    return `<span class="result-cell placeholder clickable" onclick="togglePiece('perf',${idx})" title="点一下直接选曲">未抽</span>`;
+  }
+}
+
+function renderPerfOpCell(row, idx, mode) {
+  const data = STATE.data.perf;
+  const anyOrder = data.some(r => r.order != null);
+  const hasPieces = row.p1 || row.p2;
+  const needPiece = hasPieces && row.result == null;
+
+  if (mode === 'order-first' && row.order == null) {
+    return `<span class="result-badge pending">先抽顺序</span>`;
+  }
+  if (mode === 'combined' && row.order == null) {
+    return `<span class="result-badge pending">点击"全部抽"</span>`;
+  }
+
+  let btns = '';
+  if (hasPieces) {
+    if (needPiece) btns += `<button class="btn btn-xs btn-pink" onclick="drawOnePerf(${idx})" style="margin:1px">🎲抽曲目</button> `;
+    else btns += `<button class="btn btn-xs btn-outline" onclick="redrawOnePerf(${idx})" style="margin:1px" title="重新抽曲目">🔄重抽</button> `;
+  } else {
+    btns += `<span style="color:var(--text-dim);font-size:0.78rem">无曲目</span> `;
+  }
+  return btns;
+}
+
+// ============================================================
+// RENDER: Sight-Singing
+// ============================================================
+function renderSight() {
+  _renumberOrders('sight');
+  ensureMinRows('sight');
+  const tbody = document.querySelector('#table-sight tbody');
+  let html = '';
+  const sightData = STATE.data.sight;
+  const hasOrderSight = sightData.some(r => r.order != null);
+  const sortedSight = hasOrderSight
+    ? [...sightData].map((r, origIdx) => ({ row: r, origIdx })).sort((a, b) => {
+        const ao = a.row.order != null ? a.row.order : 9999;
+        const bo = b.row.order != null ? b.row.order : 9999;
+        if (ao !== bo) return ao - bo;
+        return a.origIdx - b.origIdx;
+      })
+    : sightData.map((r, origIdx) => ({ row: r, origIdx }));
+  sortedSight.forEach((item, displayIdx) => {
+    const row = item.row;
+    const idx = item.origIdx;
+    html += `<tr id="sight-row-${idx}" class="${row.sightResult ? 'row-highlight' : ''}">
+      <td><input type="checkbox" class="row-checkbox" data-module="sight" data-idx="${idx}" onclick="toggleRowCheck('sight',${idx},this)"></td>
+      <td><input class="order-input" value="${row.order != null ? row.order : ''}" readonly></td>
+      <td>${displayIdx + 1}</td>
+      <td><input value="${escHtml(row.name)}" oninput="onCellChange('sight',${idx},'name',this.value)" placeholder="输入姓名"></td>
+      <td>
+        ${row.sightResult != null
+          ? `<span class="result-cell cyan clickable" onclick="openPicker('sight',${idx})" title="点一下改选">🎼 第${row.sightResult}条</span>`
+          : `<span class="result-cell placeholder clickable" onclick="openPicker('sight',${idx})" title="点一下指定">未抽</span>`}
+      </td>
+      <td>
+        ${row.sightResult != null ? `<button class="btn btn-xs btn-outline" onclick="redrawOneSight(${idx})" style="margin:1px" title="重新抽视唱">🔄重抽</button>` : (row.order != null ? `<button class="btn btn-xs btn-cyan" onclick="drawOneSight(${idx})" style="margin:1px">🎼抽视唱</button>` : `<span class="result-badge pending">请先抽出场顺序</span>`)}
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  updateActionButtons('sight');
+  updateMuteBtn('sight');
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ============================================================
+// CELL CHANGE
+// ============================================================
+function onCellChange(module, idx, col, value) {
+  if (module === 'edu') {
+    STATE.data.edu[idx][col] = value;
+  } else if (module === 'perf') {
+    STATE.data.perf[idx][col] = value;
+  } else if (module === 'sight') {
+    STATE.data.sight[idx][col] = value;
+  }
+  saveState();
+}
+
+// ============================================================
+// ADD / DELETE ROW
+// ============================================================
+function addRow(module) {
+  if (module === 'edu') STATE.data.edu.push(makeEduRow(''));
+  else if (module === 'perf') STATE.data.perf.push(makePerfRow(''));
+  else STATE.data.sight.push(makeSightRow(''));
+  saveState();
+  if (module === 'edu') renderEdu();
+  else if (module === 'perf') renderPerf();
+  else renderSight();
+  setTimeout(() => {
+    const tbody = document.querySelector(`#table-${module} tbody`);
+    if (tbody) tbody.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+function deleteSelectedRows(module) {
+  const checkboxes = document.querySelectorAll(`input[data-module="${module}"][data-idx]:checked`);
+  if (checkboxes.length === 0) { toast('请先勾选要删除的行'); return; }
+  const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.idx)).sort((a, b) => b - a);
+  indices.forEach(idx => STATE.data[module].splice(idx, 1));
+  saveState();
+  if (module === 'edu') renderEdu();
+  else if (module === 'perf') renderPerf();
+  else renderSight();
+  toast(`已删除 ${indices.length} 行`);
+}
+
+function toggleRowCheck(module, idx, el) {
+  const checkboxes = document.querySelectorAll(`input[data-module="${module}"][data-idx]`);
+  const all = document.getElementById(`selectAll-${module}`);
+  if (all) {
+    all.checked = Array.from(checkboxes).every(cb => cb.checked);
+  }
+}
+
+function toggleSelectAll(module) {
+  const all = document.getElementById(`selectAll-${module}`);
+  const checkboxes = document.querySelectorAll(`input[data-module="${module}"][data-idx]`);
+  checkboxes.forEach(cb => cb.checked = all.checked);
+}
+
+// ============================================================
+// DRAW MODE
+// ============================================================
+function setDrawMode(module, mode) {
+  STATE.drawMode[module] = mode;
+  document.querySelectorAll(`#modeSelector-${module} .mode-btn`).forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  saveState();
+  if (module === 'edu') renderEdu();
+  else if (module === 'perf') renderPerf();
+  else renderSight();
+}
+
+function updateActionButtons(module) {
+  const container = document.getElementById('actionBtns-' + module);
+  if (!container) return;
+  container.innerHTML = getMainButtonHtml(module);
+}
+
+function getMainButtonHtml(module) {
+  const mode = STATE.drawMode[module] || 'order-first';
+  const data = STATE.data[module];
+
+  // 一个人名都没有时，别摆一排点不动的按钮，直接告诉用户先录名字
+  if (!data.some(r => r.name && r.name.trim())) {
+    return '<span style="color:var(--text-dim);font-size:0.85rem">请先在下方表格里录入学生姓名</span>';
+  }
+
+  if (module === 'edu') {
+    const anyOrder = data.some(r => r.order != null);
+    const named = data.filter(r => r.name && r.name.trim());
+    // Check if all pieces for existing pieces are done
+    const allPiecesDone = named.length > 0 && named.every(r => {
+      const ipDone = (!r.ip1 && !r.ip2) ? true : r.ipResult != null;
+      const vpDone = (!r.vp1 && !r.vp2) ? true : r.vpResult != null;
+      return ipDone && vpDone;
+    });
+    const hasAnyIP = data.some(r => r.ip1 || r.ip2);
+    const hasAnyVP = data.some(r => r.vp1 || r.vp2);
+
+    if (mode === 'order-first') {
+      if (!anyOrder) return `<button class="btn btn-primary" onclick="drawOrder('edu')">🎲 抽出场顺序</button>`;
+      // After order is drawn, show batch buttons
+      let btns = '';
+      if (hasAnyIP) btns += `<button class="btn btn-primary btn-sm" onclick="drawPiecesEduAll('ip')">🎻 一键抽器乐</button> `;
+      if (hasAnyVP) btns += `<button class="btn btn-pink btn-sm" onclick="drawPiecesEduAll('vp')">🎤 一键抽声乐</button> `;
+      btns += `<button class="btn btn-gold btn-sm" onclick="drawPiecesEduAll()">🎲 一键全抽</button>`;
+      return `<div style="display:flex;gap:6px;flex-wrap:wrap">${btns}</div>`;
+    }
+    if (mode === 'pieces-first') {
+      const needPieces = named.some(r =>
+        ((r.ip1 || r.ip2) && r.ipResult == null) || ((r.vp1 || r.vp2) && r.vpResult == null)
+      );
+      if (allPiecesDone && !needPieces) {
+        if (!anyOrder) return `<button class="btn btn-primary" onclick="drawOrder('edu')">🎲 抽出场顺序</button>`;
+        return '<span style="color:var(--success)">✅ 抽签完成</span>';
+      }
+      if (needPieces) {
+        let btns = '';
+        if (data.some(r => (r.ip1 || r.ip2) && r.ipResult == null))
+          btns += `<button class="btn btn-primary btn-sm" onclick="drawPiecesEduAll('ip')">🎻 一键抽器乐</button> `;
+        if (data.some(r => (r.vp1 || r.vp2) && r.vpResult == null))
+          btns += `<button class="btn btn-pink btn-sm" onclick="drawPiecesEduAll('vp')">🎤 一键抽声乐</button> `;
+        btns += `<button class="btn btn-gold btn-sm" onclick="drawPiecesEduAll()">🎲 一键全抽</button>`;
+        return `<div style="display:flex;gap:6px;flex-wrap:wrap">${btns}</div>`;
+      }
+      return '';
+    }
+    if (mode === 'combined') {
+      return `<button class="btn btn-gold" onclick="drawCombined('edu')">✨ 一键全抽（顺序 + 曲目）</button>`;
+    }
+  }
+
+  if (module === 'sight') {
+    const anyOrder = data.some(r => r.order != null);
+    const named = data.filter(r => r.name && r.name.trim());
+    const allSightDone = named.length > 0 && named.every(r => r.sightResult != null);
+    const needSight = named.some(r => r.sightResult == null);
+
+    if (mode === 'combined') {
+      return `<button class="btn btn-gold" onclick="drawCombinedSight()">✨ 一键全抽（顺序 + 视唱）</button>`;
+    }
+    if (mode === 'pieces-first') {
+      if (allSightDone && !needSight) {
+        if (!anyOrder) return `<button class="btn btn-primary" onclick="drawOrder('sight')">🎲 抽出场顺序</button>`;
+        return '<span style="color:var(--success)">✅ 抽签完成</span>';
+      }
+      if (needSight) {
+        return `<button class="btn btn-cyan" onclick="drawAllSightNoOrder()">🎵 一键抽视唱</button>`;
+      }
+      return '';
+    }
+    // order-first
+    if (!anyOrder) {
+      return `<button class="btn btn-primary" onclick="drawOrder('sight')">🎲 抽出场顺序</button>`;
+    }
+    if (needSight) {
+      return `<button class="btn btn-cyan btn-sm" onclick="drawAllSight()">✨ 一键抽视唱</button>`;
+    }
+    return '<span style="color:var(--success)">✅ 抽签完成</span>';
+  }
+
+  if (module === 'perf') {
+    const anyOrder = data.some(r => r.order != null);
+    const named = data.filter(r => r.name && r.name.trim());
+    const allPiecesDone = named.length > 0 && named.every(r =>
+      !r.p1 && !r.p2 ? true : r.result != null
+    );
+    const needPieces = named.some(r => (r.p1 || r.p2) && r.result == null);
+
+    if (mode === 'order-first') {
+      if (!anyOrder) return `<button class="btn btn-primary" onclick="drawOrder('perf')">🎲 抽出场顺序</button>`;
+      if (needPieces) {
+        return `<div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-pink btn-sm" onclick="drawPiecesPerfAll()">🎲 一键抽所有人曲目</button>
+        </div>`;
+      }
+      return '<span style="color:var(--success)">✅ 抽签完成</span>';
+    }
+    if (mode === 'pieces-first') {
+      if (allPiecesDone) {
+        if (!anyOrder) return `<button class="btn btn-primary" onclick="drawOrder('perf')">🎲 抽出场顺序</button>`;
+        return '<span style="color:var(--success)">✅ 抽签完成</span>';
+      }
+      if (needPieces) {
+        return `<button class="btn btn-pink" onclick="drawPiecesPerfAll()">🎲 一键抽所有人曲目</button>`;
+      }
+      return '';
+    }
+    if (mode === 'combined') {
+      return `<button class="btn btn-gold" onclick="drawCombined('perf')">✨ 一键全抽（顺序 + 曲目）</button>`;
+    }
+  }
+
+  return '';
+}
+
+// ============================================================
+// FISHER-YATES SHUFFLE
+// ============================================================
+// ============================================================
+// 增强随机抽签：加密级随机数 + 三轮洗牌 + 主动打散，顺序更乱
+// ============================================================
+// 用 crypto 真随机（比 Math.random 更不可预测，也更均匀）
+function secureRandom() {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return buf[0] / 4294967296;
+    }
+  } catch (e) {}
+  return Math.random();
+}
+function randInt(n) { return n <= 0 ? 0 : Math.floor(secureRandom() * n); }
+
+function _shuffleOnce(src) {
+  const b = src.slice();
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = randInt(i + 1);
+    const t = b[i]; b[i] = b[j]; b[j] = t;
+  }
+  return b;
+}
+
+// 混乱度打分（越大越乱）：perm[i] = 排在第 i 位的原始下标
+function _scrambleScore(perm, prev) {
+  const n = perm.length;
+  let score = 0;
+  // 1) 还停在原位的越少越好
+  for (let i = 0; i < n; i++) if (perm[i] === i) score -= 3;
+  // 2) 名单里挨着的两人仍然挨着出场 —— 这是"看起来不够乱"的元凶，重罚
+  for (let i = 0; i + 1 < n; i++) {
+    for (let k = 0; k + 1 < n; k++) {
+      if ((perm[k] === i && perm[k + 1] === i + 1) || (perm[k] === i + 1 && perm[k + 1] === i)) score -= 2;
+    }
+  }
+  // 3) 和上一次抽签位置一样的越少越好（重抽不会撞车）
+  if (prev && prev.length === n) {
+    for (let i = 0; i < n; i++) if (prev[i] === perm[i]) score -= 2;
+  }
+  return score;
+}
+
+// 判断这个顺序够不够乱：
+//   ① 没有谁还站在录入名单的原位
+//   ② 名单里挨着的两人，出场时不再挨着
+//   ③ 和上一次抽签的结果不要大面积重合
+function _isScrambled(perm, prev) {
+  const n = perm.length;
+  for (let i = 0; i < n; i++) if (perm[i] === i) return false;
+  for (let k = 0; k + 1 < n; k++) if (Math.abs(perm[k] - perm[k + 1]) === 1) return false;
+  if (prev && prev.length === n) {
+    let same = 0;
+    for (let i = 0; i < n; i++) if (prev[i] === perm[i]) same++;
+    if (same > Math.max(1, Math.floor(n / 6))) return false;
+  }
+  return true;
+}
+
+// 打散抽签：连洗三轮，一旦够乱就采用（保证随机与公平）
+// 洗不出「足够乱」时，退回最后一次的随机结果 —— 不能挑「打分最高的那个」，
+// 那会让某些排列被反复选中，抽签就不公平了（实测卡方会从 1.0 飙到 10）。
+function fisherYates(arr, prevOrder) {
+  const n = arr.length;
+  if (n < 4) return _shuffleOnce(arr);
+  const tries = Math.min(80, Math.max(24, n * 3));
+  let last = null;
+  for (let t = 0; t < tries; t++) {
+    let cand = _shuffleOnce(arr);
+    cand = _shuffleOnce(cand);
+    cand = _shuffleOnce(cand);
+    if (_isScrambled(cand, prevOrder)) return cand;
+    last = cand;
+  }
+  return last || _shuffleOnce(arr);
+}
+
+// 上一次的出场顺序（用于避免重抽时撞车）
+function _prevOrderMap(rows) {
+  const n = rows.length;
+  const prev = new Array(n);
+  let ok = true;
+  rows.forEach(function (r, i) {
+    if (r.order != null && r.order >= 1 && r.order <= n) prev[r.order - 1] = i;
+    else ok = false;
+  });
+  return ok ? prev : null;
+}
+
+// 有姓名才算「考生」：空行、没填名字的行不参与抽签，也不占出场序号
+function _namedIndices(module) {
+  const data = STATE.data[module];
+  const list = [];
+  data.forEach(function (r, i) { if (r.name && r.name.trim()) list.push(i); });
+  return list;
+}
+
+// 抽出场顺序：只给有姓名的行编号，序号严格 1..N 连续
+// 返回洗好的原始下标数组（用于动画展示）
+function _assignOrders(module) {
+  const data = STATE.data[module];
+  const named = _namedIndices(module);
+  // 先把空行/无名行的顺序清掉，避免它们占着序号
+  data.forEach(function (r, i) {
+    if (named.indexOf(i) < 0) r.order = null;
+  });
+  if (named.length === 0) return [];
+  const prev = _prevOrderMap(named.map(function (i) { return data[i]; }));
+  const shuffled = fisherYates(named.slice(), prev);
+  shuffled.forEach(function (origIdx, k) { data[origIdx].order = k + 1; });
+  return shuffled;
+}
+
+// 名单变动（删行 / 改名字 / 清空姓名）后，把出场顺序重新编成 1..N，不留断号
+function _renumberOrders(module) {
+  const data = STATE.data[module];
+  data.forEach(function (r) { if (!r.name || !r.name.trim()) r.order = null; });
+  const withOrder = data
+    .filter(function (r) { return r.name && r.name.trim() && r.order != null; })
+    .sort(function (a, b) { return a.order - b.order; });
+  withOrder.forEach(function (r, i) { r.order = i + 1; });
+}
+
+// ============================================================
+// SMOOTH ANIMATION RUNNER (requestAnimationFrame based)
+// ============================================================
+let _activeAnimation = null; // { cancel: fn } or null
+
+function cancelActiveAnimation() {
+  if (_activeAnimation) {
+    _activeAnimation.cancel();
+    _activeAnimation = null;
+  }
+}
+
+// 统一刷新某个模块表格
+function renderModule(module) {
+  if (module === 'edu') renderEdu();
+  else if (module === 'perf') renderPerf();
+  else renderSight();
+}
+
+// 老虎机滚动文字：带轻微上滑+模糊的过渡，长曲名自动缩小避免换行抖动
+function setRollingText(el, text, isFinal) {
+  if (!el || el.textContent === text) return;
+  el.textContent = text;
+  const len = text.length;
+  el.style.fontSize = len > 26 ? '2rem' : len > 18 ? '2.6rem' : len > 12 ? '3.4rem' : '';
+  if (isFinal) return;
+  if (typeof el.animate === 'function') {
+    el.animate(
+      [
+        { transform: 'translateY(-16px)', opacity: 0.35, filter: 'blur(3px)' },
+        { transform: 'translateY(0)', opacity: 1, filter: 'blur(0)' }
+      ],
+      { duration: 130, easing: 'cubic-bezier(.2,.7,.3,1)' }
+    );
+  }
+}
+
+// Run a progressive slot-machine animation driven by TIME (not frame count),
+// so the rhythm is identical on 60Hz / 90Hz / 120Hz screens.
+// onTick(tick, total): each visual update; return false to stop early
+// onDone(): called when finished (guaranteed to run, even if rAF stalls)
+// config: { totalTicks, minGap, maxGap, duration } (旧参数 minFrameSkip/maxFrameSkip 仍兼容)
+function runSlotAnimation(config) {
+  cancelActiveAnimation();
+  const totalTicks = config.totalTicks || 24;
+  const onTick = config.onTick;
+  const onDone = config.onDone;
+
+  const minGap = config.minGap != null ? config.minGap : (config.minFrameSkip || 2) * 16;
+  const maxGap = config.maxGap != null ? config.maxGap : (config.maxFrameSkip || 12) * 16;
+  const duration = config.duration || (totalTicks * (minGap + maxGap) / 2) * 0.8;
+
+  let tick = 0;
+  let startTs = 0;
+  let lastTickTs = 0;
+  let cancelled = false;
+  let rafId = 0;
+  let finished = false;
+  let fallbackTimer = 0;
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    cancelled = true;
+    cancelAnimationFrame(rafId);
+    clearTimeout(fallbackTimer);
+    _activeAnimation = null;
+    if (onDone) onDone();
+  }
+
+  function step(now) {
+    if (cancelled) return;
+    if (!startTs) { startTs = now; lastTickTs = now; }
+    const elapsed = now - startTs;
+    const p = Math.min(1, elapsed / duration);
+    // 间隔随时间平滑拉长（缓出）：开始快，结尾慢
+    const gap = minGap + (maxGap - minGap) * Math.pow(p, 1.6);
+
+    if (tick === 0 || now - lastTickTs >= gap) {
+      lastTickTs = now;
+      if (tick < totalTicks) {
+        const shouldContinue = onTick ? onTick(tick, totalTicks) : true;
+        tick++;
+        if (shouldContinue === false) { _activeAnimation = null; finished = true; cancelAnimationFrame(rafId); clearTimeout(fallbackTimer); return; }
+      } else {
+        finish();
+        return;
+      }
+    }
+    if (tick >= totalTicks) { finish(); return; }
+    rafId = requestAnimationFrame(step);
+  }
+
+  _activeAnimation = {
+    cancel: function() {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      clearTimeout(fallbackTimer);
+      _activeAnimation = null;
+    }
+  };
+  rafId = requestAnimationFrame(step);
+  // 兜底：rAF 被系统节流 / 页面切后台 / 低帧率设备时，仍保证结果落地
+  fallbackTimer = setTimeout(finish, duration + 400);
+}
+
+// ============================================================
+// DRAW ORDER (animated)
+// ============================================================
+function drawOrder(module) {
+  const data = STATE.data[module];
+  const namedRows = data.filter(r => r.name && r.name.trim());
+  if (namedRows.length === 0) { toast('请先录入学生姓名'); return; }
+
+  // In pieces-first mode, check if pieces are drawn
+  if (module === 'edu' && STATE.drawMode.edu === 'pieces-first') {
+    const missingPieces = namedRows.filter(r =>
+      ((r.ip1 || r.ip2) && r.ipResult == null) || ((r.vp1 || r.vp2) && r.vpResult == null)
+    );
+    if (missingPieces.length > 0) {
+      toast('请先完成所有学生的曲目抽签，再抽出场顺序');
+      return;
+    }
+  }
+  if (module === 'perf' && STATE.drawMode.perf === 'pieces-first') {
+    const missingPieces = namedRows.filter(r => (r.p1 || r.p2) && r.result == null);
+    if (missingPieces.length > 0) {
+      toast('请先完成所有学生的曲目抽签，再抽出场顺序');
+      return;
+    }
+  }
+  if (module === 'sight' && STATE.drawMode.sight === 'pieces-first') {
+    const missingSight = namedRows.filter(r => r.sightResult == null);
+    if (missingSight.length > 0) {
+      toast('请先完成所有学生的视唱抽签，再抽出场顺序');
+      return;
+    }
+  }
+
+  drawOrderAnimated(module, data, () => {
+    autoSaveHistory(module);
+    if (module === 'edu') renderEdu();
+    else if (module === 'perf') renderPerf();
+    else renderSight();
+  });
+}
+
+function drawOrderAnimated(module, _data, callback) {
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+
+  const data = STATE.data[module];
+  const named = _namedIndices(module);
+  if (named.length === 0) { toast('请先录入学生姓名'); return; }
+  const prev = _prevOrderMap(named.map(function (i) { return data[i]; }));
+  const shuffled = fisherYates(named.slice(), prev);
+
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = '正在抽出场顺序...';
+
+  runSlotAnimation({
+    totalTicks: 26,
+    minGap: 34,
+    maxGap: 150,
+    duration: 1500,
+    onTick: function(tick) {
+      const rndIdx = shuffled[randInt(shuffled.length)];
+      const name = STATE.data[module][rndIdx].name || '(空)';
+      setRollingText(rollingEl, (tick + 1) + '  ' + name);
+      playTick(module);
+      return true;
+    },
+    onDone: function() {
+      playDing(module);
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '出场顺序已生成';
+      // 结果立即落地并刷新，不等动画收尾（只给有姓名的行编号，序号 1..N 连续）
+      const currentData = STATE.data[module];
+      currentData.forEach(function (r, i) {
+        if (!(r.name && r.name.trim())) r.order = null;
+      });
+      shuffled.forEach(function(origIdx, orderIdx) {
+        if (origIdx < currentData.length) {
+          currentData[origIdx].order = orderIdx + 1;
+        }
+      });
+      saveState();
+      renderModule(module);
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        if (callback) callback();
+      }, 650);
+    }
+  });
+}
+
+// ============================================================
+// DRAW ONE (EDU: ip or vp)
+// ============================================================
+// Redraw single student's result (clear and redraw)
+function redrawOne(module, idx, type) {
+  const row = STATE.data[module][idx];
+  if (type === 'ip') { row.ipResult = null; row.ipManual = false; }
+  else if (type === 'vp') { row.vpResult = null; row.vpManual = false; }
+  saveState();
+  drawOne(module, idx, type);
+}
+
+function redrawOnePerf(idx) {
+  const row = STATE.data.perf[idx];
+  row.result = null;
+  row.manual = false;
+  saveState();
+  drawOnePerf(idx);
+}
+
+function redrawOneSight(idx) {
+  const row = STATE.data.sight[idx];
+  row.sightResult = null;
+  row.sightManual = false;
+  saveState();
+  renderSight();
+  drawOneSight(idx);
+}
+
+function drawOne(module, idx, type) {
+  cancelActiveAnimation();
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+
+  const row = STATE.data[module][idx];
+  let options;
+  if (type === 'ip') {
+    options = [row.ip1, row.ip2].filter(Boolean);
+    if (options.length === 0) { toast('请先录入器乐曲目'); return; }
+  } else {
+    options = [row.vp1, row.vp2].filter(Boolean);
+    if (options.length === 0) { toast('请先录声乐曲目'); return; }
+  }
+
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  const typeLabel = type === 'ip' ? '器乐' : '声乐';
+  labelEl.textContent = row.name + ' · ' + typeLabel + '抽签';
+
+  runSlotAnimation({
+    totalTicks: 22,
+    minGap: 32,
+    maxGap: 140,
+    duration: 1400,
+    onTick: function() {
+      setRollingText(rollingEl, options[randInt(options.length)]);
+      playTick(module);
+      return true;
+    },
+    onDone: function() {
+      const result = options[randInt(options.length)];
+      playDing(module);
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, result, true);
+      labelEl.textContent = STATE.data[module][idx].name + ' · ' + typeLabel + '：' + result;
+      // 立即写入并刷新
+      const curRow = STATE.data[module][idx];
+      if (type === 'ip') { curRow.ipResult = result; curRow.ipManual = false; }
+      else { curRow.vpResult = result; curRow.vpManual = false; }
+      saveState();
+      if (module === 'edu') renderEdu();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        if (module === 'edu') { renderEdu(); highlightRow('edu', idx); }
+      }, 650);
+    }
+  });
+}
+
+function drawOnePerf(idx) {
+  cancelActiveAnimation();
+  const row = STATE.data.perf[idx];
+  const options = [row.p1, row.p2].filter(Boolean);
+  if (options.length === 0) { toast('请先录入曲目'); return; }
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  const typeLabel = row.perfType === 'vocal' ? '声乐' : '器乐';
+  labelEl.textContent = row.name + ' · ' + typeLabel + '抽签';
+
+  runSlotAnimation({
+    totalTicks: 22,
+    minGap: 32,
+    maxGap: 140,
+    duration: 1400,
+    onTick: function() {
+      setRollingText(rollingEl, options[randInt(options.length)]);
+      playTick('perf');
+      return true;
+    },
+    onDone: function() {
+      const result = options[randInt(options.length)];
+      playDing('perf');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, result, true);
+      labelEl.textContent = STATE.data.perf[idx].name + '：' + result;
+      const curRow = STATE.data.perf[idx];
+      curRow.result = result;
+      curRow.manual = false;
+      saveState();
+      renderPerf();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        renderPerf();
+        highlightRow('perf', idx);
+      }, 650);
+    }
+  });
+}
+
+function drawOneSight(idx) {
+  cancelActiveAnimation();
+  const row = STATE.data.sight[idx];
+  const maxCount = STATE.sightCount;
+  const repeatable = STATE.sightRepeatable;
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = row.name + ' · 视唱抽签';
+
+  runSlotAnimation({
+    totalTicks: 22,
+    minGap: 32,
+    maxGap: 140,
+    duration: 1400,
+    onTick: function() {
+      setRollingText(rollingEl, '第 ' + (randInt(maxCount) + 1) + ' 条');
+      playTick('sight');
+      return true;
+    },
+    onDone: function() {
+      let result;
+      if (!repeatable) {
+        const used = new Set(STATE.data.sight.filter(function(r) { return r.sightResult != null && r !== STATE.data.sight[idx]; }).map(function(r) { return r.sightResult; }));
+        const available = [];
+        for (let i = 1; i <= maxCount; i++) {
+          if (!used.has(i)) available.push(i);
+        }
+        if (available.length === 0) { toast('所有视唱条目已分配完毕'); overlay.classList.remove('active'); return; }
+        result = available[randInt(available.length)];
+      } else {
+        result = randInt(maxCount) + 1;
+      }
+      playDing('sight');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '第 ' + result + ' 条', true);
+      labelEl.textContent = STATE.data.sight[idx].name + '：第 ' + result + ' 条视唱';
+      const curRow = STATE.data.sight[idx];
+      curRow.sightResult = result;
+      curRow.sightManual = false;
+      saveState();
+      renderSight();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        renderSight();
+        highlightRow('sight', idx);
+      }, 650);
+    }
+  });
+}
+
+// ============================================================
+// DRAW PIECES (EDU - all students)
+// ============================================================
+function drawPiecesEduAll(subType) {
+  cancelActiveAnimation();
+  const data = STATE.data.edu;
+  const named = data.filter(function(r) { return r.name && r.name.trim(); });
+  if (named.length === 0) { toast('请先录入学生姓名'); return; }
+
+  if (STATE.drawMode.edu === 'order-first') {
+    const anyOrder = data.some(function(r) { return r.order != null; });
+    if (!anyOrder) { toast('请先抽出场顺序'); return; }
+  }
+
+  const targets = [];
+  named.forEach(function(row) {
+    if (!subType || subType === 'ip') {
+      if (row.ip1 || row.ip2) targets.push({ row: row, type: 'ip' });
+    }
+    if (!subType || subType === 'vp') {
+      if (row.vp1 || row.vp2) targets.push({ row: row, type: 'vp' });
+    }
+  });
+  if (targets.length === 0) { toast('没有可抽的曲目'); return; }
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  const labelText = subType === 'ip' ? '正在抽取器乐曲目...' : subType === 'vp' ? '正在抽声乐曲目...' : '正在抽取所有曲目...';
+  labelEl.textContent = labelText;
+
+  runSlotAnimation({
+    totalTicks: 28,
+    minGap: 30,
+    maxGap: 130,
+    duration: 1600,
+    onTick: function() {
+      const t = targets[randInt(targets.length)];
+      const opts = t.type === 'ip' ? [t.row.ip1, t.row.ip2].filter(Boolean) : [t.row.vp1, t.row.vp2].filter(Boolean);
+      setRollingText(rollingEl, opts[randInt(opts.length)]);
+      playTick('edu');
+      return true;
+    },
+    onDone: function() {
+      playDing('edu');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '曲目抽签完成';
+
+      // Read data fresh from STATE
+      const curData = STATE.data.edu;
+      targets.forEach(function(t) {
+        const row = curData.find(function(r) { return r === t.row; }) || t.row;
+        const opts = t.type === 'ip'
+          ? [row.ip1, row.ip2].filter(Boolean)
+          : [row.vp1, row.vp2].filter(Boolean);
+        if (t.type === 'ip') { row.ipResult = opts[randInt(opts.length)]; row.ipManual = false; }
+        else { row.vpResult = opts[randInt(opts.length)]; row.vpManual = false; }
+      });
+
+      saveState();
+      renderEdu();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        saveState();
+        renderEdu();
+        autoSaveHistory('edu');
+        toast('曲目抽签完成！');
+      }, 650);
+    }
+  });
+}
+
+function drawPiecesPerfAll() {
+  cancelActiveAnimation();
+  const data = STATE.data.perf;
+  const named = data.filter(function(r) { return r.name && r.name.trim(); });
+  if (named.length === 0) { toast('请先录入学生姓名'); return; }
+
+  if (STATE.drawMode.perf === 'order-first') {
+    const anyOrder = data.some(function(r) { return r.order != null; });
+    if (!anyOrder) { toast('请先抽出场顺序'); return; }
+  }
+
+  const targets = named.filter(function(r) { return r.p1 || r.p2; });
+  if (targets.length === 0) { toast('没有可抽的曲目'); return; }
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = '正在抽取曲目...';
+
+  runSlotAnimation({
+    totalTicks: 26,
+    minGap: 30,
+    maxGap: 130,
+    duration: 1500,
+    onTick: function() {
+      const t = targets[randInt(targets.length)];
+      const opts = [t.p1, t.p2].filter(Boolean);
+      setRollingText(rollingEl, opts[randInt(opts.length)]);
+      playTick('perf');
+      return true;
+    },
+    onDone: function() {
+      playDing('perf');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '曲目抽签完成';
+
+      targets.forEach(function(t) {
+        const opts = [t.p1, t.p2].filter(Boolean);
+        t.result = opts[randInt(opts.length)];
+        t.manual = false;
+      });
+
+      saveState();
+      renderPerf();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        saveState();
+        renderPerf();
+        autoSaveHistory('perf');
+        toast('曲目抽签完成！');
+      }, 650);
+    }
+  });
+}
+
+// ============================================================
+// DRAW COMBINED (order + pieces together)
+// ============================================================
+function drawCombined(module) {
+  cancelActiveAnimation();
+  const data = STATE.data[module];
+  const named = data.filter(function(r) { return r.name && r.name.trim(); });
+  if (named.length === 0) { toast('请先录入学生姓名'); return; }
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = '正在一键全抽...';
+
+  runSlotAnimation({
+    totalTicks: 32,
+    minGap: 30,
+    maxGap: 140,
+    duration: 1800,
+    onTick: function() {
+      const rndName = named[randInt(named.length)];
+      if (module === 'edu') {
+        const allPieces = [];
+        named.forEach(function(r) { if (r.ip1) allPieces.push(r.ip1); if (r.ip2) allPieces.push(r.ip2); if (r.vp1) allPieces.push(r.vp1); if (r.vp2) allPieces.push(r.vp2); });
+        setRollingText(rollingEl, allPieces.length > 0
+          ? allPieces[randInt(allPieces.length)]
+          : rndName.name);
+      } else {
+        const allPieces = [];
+        named.forEach(function(r) { if (r.p1) allPieces.push(r.p1); if (r.p2) allPieces.push(r.p2); });
+        setRollingText(rollingEl, allPieces.length > 0
+          ? allPieces[randInt(allPieces.length)]
+          : rndName.name);
+      }
+      playTick(module);
+      return true;
+    },
+    onDone: function() {
+      playDing(module);
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '出场顺序 + 曲目已全部生成';
+
+      // Read fresh data from STATE
+      _assignOrders(module);
+
+      if (module === 'edu') {
+        named.forEach(function(row) {
+          if (row.ip1 || row.ip2) { const opts = [row.ip1, row.ip2].filter(Boolean); row.ipResult = opts[randInt(opts.length)]; row.ipManual = false; }
+          if (row.vp1 || row.vp2) { const opts = [row.vp1, row.vp2].filter(Boolean); row.vpResult = opts[randInt(opts.length)]; row.vpManual = false; }
+        });
+      } else {
+        named.forEach(function(row) {
+          if (row.p1 || row.p2) { const opts = [row.p1, row.p2].filter(Boolean); row.result = opts[randInt(opts.length)]; row.manual = false; }
+        });
+      }
+
+      saveState();
+      renderModule(module);
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        saveState();
+        autoSaveHistory(module);
+        renderModule(module);
+        toast('一键全抽完成！');
+      }, 650);
+    }
+  });
+}
+
+// ============================================================
+// DRAW ALL SIGHT
+// ============================================================
+function drawAllSight() {
+  cancelActiveAnimation();
+  const data = STATE.data.sight;
+  const valid = data.filter(r => r.name && r.name.trim() && r.order != null);
+  if (valid.length === 0) { toast('请先录入姓名并抽出场顺序'); return; }
+  _runSightBatch(valid);
+}
+
+function drawAllSightNoOrder() {
+  cancelActiveAnimation();
+  const data = STATE.data.sight;
+  const valid = data.filter(r => r.name && r.name.trim());
+  if (valid.length === 0) { toast('请先录入学生姓名'); return; }
+  _runSightBatch(valid);
+}
+
+// 批量抽视唱：跟曲目抽签一样有老虎机动画，动画结束一次性落地
+function _runSightBatch(rows) {
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  const maxCount = STATE.sightCount;
+  const repeatable = STATE.sightRepeatable;
+
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = '正在抽取视唱条目...';
+
+  runSlotAnimation({
+    totalTicks: 26,
+    minGap: 30,
+    maxGap: 130,
+    duration: 1500,
+    onTick: function () {
+      setRollingText(rollingEl, '第 ' + (randInt(maxCount) + 1) + ' 条');
+      playTick('sight');
+      return true;
+    },
+    onDone: function () {
+      // 不重复模式：本次不参与抽的人已经占掉的条目，先排除掉，避免撞号
+      const used = new Set();
+      const inBatch = new Set(rows);
+      STATE.data.sight.forEach(function (r) {
+        if (!inBatch.has(r) && r.sightResult != null) used.add(r.sightResult);
+      });
+
+      let exhausted = false;
+      rows.forEach(function (row) {
+        let result;
+        if (!repeatable) {
+          const available = [];
+          for (let j = 1; j <= maxCount; j++) if (!used.has(j)) available.push(j);
+          if (available.length === 0) { exhausted = true; row.sightResult = null; return; }
+          result = available[randInt(available.length)];
+          used.add(result);
+        } else {
+          result = randInt(maxCount) + 1;
+        }
+        row.sightResult = result;
+        row.sightManual = false;
+      });
+
+      playDing('sight');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '视唱抽签完成';
+      saveState();
+      renderSight();
+      setTimeout(function () {
+        overlay.classList.remove('active');
+        saveState();
+        renderSight();
+        autoSaveHistory('sight');
+        toast(exhausted ? '⚠️ 可分配条目不够，有学生没抽到' : '全部视唱抽签完成！');
+      }, 650);
+    }
+  });
+}
+
+function drawCombinedSight() {
+  cancelActiveAnimation();
+  const data = STATE.data.sight;
+  const named = data.filter(function(r) { return r.name && r.name.trim(); });
+  if (named.length === 0) { toast('请先录入学生姓名'); return; }
+
+  const overlay = document.getElementById('lotteryOverlay');
+  const rollingEl = document.getElementById('lotteryRolling');
+  const labelEl = document.getElementById('lotteryLabel');
+  overlay.classList.add('active');
+  rollingEl.classList.remove('gold');
+  labelEl.textContent = '正在一键全抽...';
+
+  runSlotAnimation({
+    totalTicks: 32,
+    minGap: 30,
+    maxGap: 140,
+    duration: 1800,
+    onTick: function() {
+      const rndName = named[randInt(named.length)];
+      const rndNum = randInt(STATE.sightCount) + 1;
+      setRollingText(rollingEl, '第' + rndNum + '条  ' + rndName.name);
+      playTick('sight');
+      return true;
+    },
+    onDone: function() {
+      playDing('sight');
+      rollingEl.classList.add('gold');
+      setRollingText(rollingEl, '✅ 完成！', true);
+      labelEl.textContent = '出场顺序 + 视唱已全部生成';
+
+      _assignOrders('sight');
+
+      const repeatable = STATE.sightRepeatable;
+      const maxCount = STATE.sightCount;
+      const used = new Set();
+      named.forEach(function(row) {
+        let result;
+        if (!repeatable) {
+          const available = [];
+          for (let j = 1; j <= maxCount; j++) { if (!used.has(j)) available.push(j); }
+          if (available.length === 0) { row.sightResult = null; return; }
+          result = available[randInt(available.length)];
+          used.add(result);
+        } else {
+          result = randInt(maxCount) + 1;
+        }
+        row.sightResult = result;
+        row.sightManual = false;
+      });
+
+      saveState();
+      renderSight();
+      setTimeout(function() {
+        overlay.classList.remove('active');
+        saveState();
+        autoSaveHistory('sight');
+        renderSight();
+        toast('一键全抽完成！');
+      }, 650);
+    }
+  });
+}
+
+function highlightRow(module, idx) {
+  const row = document.getElementById(`${module}-row-${idx}`);
+  if (row) {
+    row.classList.add('row-highlight');
+    row.style.transition = 'none';
+    row.style.background = 'rgba(245,158,11,0.2)';
+    setTimeout(() => { row.style.transition = 'background 0.5s'; row.style.background = ''; }, 100);
+  }
+}
+
+// ============================================================
+// MANUAL PIECE PICKER —— 自己选/换其中一首
+// ============================================================
+const PICKER = { module: null, idx: null, type: null, options: [] };
+
+function getPickerOptions(module, idx, type) {
+  const row = STATE.data[module][idx];
+  if (!row) return [];
+  if (module === 'edu') {
+    const opts = type === 'ip' ? [row.ip1, row.ip2] : [row.vp1, row.vp2];
+    return Array.from(new Set(opts.filter(function(s) { return s && String(s).trim(); })));
+  }
+  if (module === 'perf') {
+    return Array.from(new Set([row.p1, row.p2].filter(function(s) { return s && String(s).trim(); })));
+  }
+  if (module === 'sight') {
+    const arr = [];
+    for (let i = 1; i <= STATE.sightCount; i++) arr.push('第 ' + i + ' 条');
+    return arr;
+  }
+  return [];
+}
+
+function getCurrentResult(module, idx, type) {
+  const row = STATE.data[module][idx];
+  if (!row) return null;
+  if (module === 'edu') return type === 'ip' ? row.ipResult : row.vpResult;
+  if (module === 'perf') return row.result;
+  return row.sightResult != null ? ('第 ' + row.sightResult + ' 条') : null;
+}
+
+// 点一下结果 → 直接换另一首（器乐 / 声乐 / 表演曲目）
+function togglePiece(module, idx, type) {
+  const row = STATE.data[module][idx];
+  if (!row) return;
+  const opts = getPickerOptions(module, idx, type);
+  if (opts.length === 0) { toast('请先录入曲目'); return; }
+  if (opts.length === 1) { toast('只录入了一首曲目，无需切换'); return; }
+
+  const cur = module === 'edu' ? (type === 'ip' ? row.ipResult : row.vpResult) : row.result;
+  let curIdx = cur ? opts.indexOf(cur) : -1;
+  const next = opts[(curIdx + 1) % opts.length];
+
+  if (module === 'edu') {
+    if (type === 'ip') { row.ipResult = next; row.ipManual = true; }
+    else { row.vpResult = next; row.vpManual = true; }
+  } else {
+    row.result = next; row.manual = true;
+  }
+
+  saveState();
+  if (module === 'edu') { renderEdu(); highlightRow('edu', idx); }
+  else { renderPerf(); highlightRow('perf', idx); }
+  toast('🔁 已换为：' + next);
+}
+
+function openPicker(module, idx, type) {
+  const row = STATE.data[module][idx];
+  if (!row) return;
+  const opts = getPickerOptions(module, idx, type);
+  if (opts.length === 0) { toast('该行暂无可选曲目，请先录入'); return; }
+
+  PICKER.module = module;
+  PICKER.idx = idx;
+  PICKER.type = type || null;
+  PICKER.options = opts;
+
+  const name = escHtml(row.name && row.name.trim() ? row.name : '(未命名)');
+  let sub = '';
+  if (module === 'edu') sub = `${name} · ${type === 'ip' ? '🎻 器乐' : '🎤 声乐'}`;
+  else if (module === 'perf') sub = `${name} · ${row.perfType === 'vocal' ? '🎤 声乐' : '🎻 器乐'}`;
+  else sub = `${name} · 共 ${STATE.sightCount} 条视唱`;
+
+  document.getElementById('pickerTitle').textContent = '✋ 手动选曲';
+  document.getElementById('pickerSub').innerHTML =
+    sub + '<br><span style="opacity:.65;font-size:0.8rem">从下方任选一首作为最终结果</span>';
+
+  const cur = getCurrentResult(module, idx, type);
+  document.getElementById('pickerOptions').innerHTML = opts.map(function(o, i) {
+    const isCur = (o === cur);
+    return `<button class="pick-opt ${isCur ? 'current' : ''}" onclick="confirmPick(${i})">${isCur ? '✅ ' : '◻ '}${escHtml(o)}</button>`;
+  }).join('');
+
+  document.getElementById('pickerModal').classList.add('active');
+}
+
+function closePicker() {
+  document.getElementById('pickerModal').classList.remove('active');
+}
+
+// 手动指定某一首
+function confirmPick(i) {
+  const module = PICKER.module, idx = PICKER.idx, type = PICKER.type;
+  const val = PICKER.options[i];
+  const row = STATE.data[module][idx];
+  if (!row) { closePicker(); return; }
+
+  if (module === 'edu') {
+    if (type === 'ip') { row.ipResult = val; row.ipManual = true; }
+    else { row.vpResult = val; row.vpManual = true; }
+  } else if (module === 'perf') {
+    row.result = val; row.manual = true;
+  } else {
+    row.sightResult = parseInt(String(val).replace(/\D/g, ''), 10) || 1;
+    row.sightManual = true;
+  }
+
+  saveState();
+  closePicker();
+  if (module === 'edu') { renderEdu(); highlightRow('edu', idx); }
+  else if (module === 'perf') { renderPerf(); highlightRow('perf', idx); }
+  else { renderSight(); highlightRow('sight', idx); }
+  toast('✋ 已手动指定：' + val);
+}
+
+// 弹窗里直接随机重抽（该生该类型）
+function pickerRedraw() {
+  const module = PICKER.module, idx = PICKER.idx, type = PICKER.type;
+  closePicker();
+  if (module === 'edu') redrawOne(module, idx, type);
+  else if (module === 'perf') redrawOnePerf(idx);
+  else redrawOneSight(idx);
+}
+
+// ============================================================
+// SIGHT COUNT
+// ============================================================
+function saveSightCount() {
+  const val = parseInt(document.getElementById('sightCount').value) || 20;
+  STATE.sightCount = Math.max(1, Math.min(200, val));
+  document.getElementById('sightCount').value = STATE.sightCount;
+  saveState();
+}
+
+// ============================================================
+// SIGHT REPEATABLE TOGGLE
+// ============================================================
+function toggleSightRepeat() {
+  STATE.sightRepeatable = !STATE.sightRepeatable;
+  updateSightRepeatBtn();
+  saveState();
+  toast(STATE.sightRepeatable ? '已切换为：可重复（每个学生独立抽）' : '已切换为：不重复（条目不可重复分配）');
+}
+function updateSightRepeatBtn() {
+  const btn = document.getElementById('sightRepeatBtn');
+  if (!btn) return;
+  if (STATE.sightRepeatable) {
+    btn.textContent = '🔄 可重复';
+    btn.classList.add('active');
+    btn.title = '可重复：每个学生独立从1~N中随机抽，可能重复';
+  } else {
+    btn.textContent = '🔒 不重复';
+    btn.classList.remove('active');
+    btn.title = '不重复：每个条目只能分配给一个学生';
+  }
+}
+
+// ============================================================
+// CLEAR
+// ============================================================
+function showClearMenu(module) {
+  STATE.currentClearModule = module;
+  document.getElementById('clearModal').classList.add('active');
+}
+function closeClearModal() {
+  document.getElementById('clearModal').classList.remove('active');
+}
+function clearData(type) {
+  const module = STATE.currentClearModule;
+  const data = STATE.data[module];
+  if (type === 'all') {
+    STATE.data[module] = [];
+  } else if (type === 'names') {
+    data.forEach(r => { r.name = ''; });
+  } else if (type === 'pieces') {
+    data.forEach(r => {
+      if (module === 'edu') { r.ip1 = ''; r.ip2 = ''; r.vp1 = ''; r.vp2 = ''; }
+      else if (module === 'perf') { r.p1 = ''; r.p2 = ''; }
+    });
+  } else if (type === 'results') {
+    data.forEach(r => {
+      r.order = null;
+      if (module === 'edu') { r.ipResult = null; r.vpResult = null; r.ipManual = false; r.vpManual = false; }
+      else if (module === 'perf') { r.result = null; r.manual = false; }
+      else { r.sightResult = null; r.sightManual = false; }
+    });
+  }
+  saveState();
+  closeClearModal();
+  if (module === 'edu') renderEdu();
+  else if (module === 'perf') renderPerf();
+  else renderSight();
+  toast('已清空');
+}
+
+// ============================================================
+// EXPORT EXCEL (.xlsx) —— 按艺考「打分表」模板导出
+//   只抽声乐   -> 声乐打分表
+//   只抽器乐   -> 器乐打分表
+//   两边都抽了 -> 抽签打分总表（声乐+器乐），另附声乐/器乐两张分表
+//   视唱       -> 视唱打分表
+// ============================================================
+
+/* ---------- 纯前端 XLSX 生成（零依赖，可离线） ---------- */
+var _CRC_TABLE = (function () {
+  var t = new Uint32Array(256);
+  for (var n = 0; n < 256; n++) {
+    var c = n;
+    for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function _crc32(bytes) {
+  var c = 0xFFFFFFFF;
+  for (var i = 0; i < bytes.length; i++) c = _CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// 生成不压缩的 zip（xlsx 就是一堆 xml 打的包）
+function _zipStore(files) {
+  var enc = new TextEncoder();
+  var entries = files.map(function (f) {
+    var data = enc.encode(f.content);
+    return { name: enc.encode(f.name), data: data, crc: _crc32(data) };
+  });
+  var d = new Date();
+  var dosTime = ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | (Math.floor(d.getSeconds() / 2) & 31);
+  var dosDate = (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31);
+  var localSize = 0;
+  entries.forEach(function (e) { e.offset = localSize; localSize += 30 + e.name.length + e.data.length; });
+  var cdSize = 0;
+  entries.forEach(function (e) { cdSize += 46 + e.name.length; });
+  var buf = new ArrayBuffer(localSize + cdSize + 22);
+  var view = new DataView(buf), bytes = new Uint8Array(buf), off = 0;
+  entries.forEach(function (e) {
+    view.setUint32(off, 0x04034b50, true); off += 4;
+    view.setUint16(off, 20, true); off += 2;
+    view.setUint16(off, 0x0800, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint16(off, dosTime, true); off += 2;
+    view.setUint16(off, dosDate, true); off += 2;
+    view.setUint32(off, e.crc, true); off += 4;
+    view.setUint32(off, e.data.length, true); off += 4;
+    view.setUint32(off, e.data.length, true); off += 4;
+    view.setUint16(off, e.name.length, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    bytes.set(e.name, off); off += e.name.length;
+    bytes.set(e.data, off); off += e.data.length;
+  });
+  var cdStart = off;
+  entries.forEach(function (e) {
+    view.setUint32(off, 0x02014b50, true); off += 4;
+    view.setUint16(off, 20, true); off += 2;
+    view.setUint16(off, 20, true); off += 2;
+    view.setUint16(off, 0x0800, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint16(off, dosTime, true); off += 2;
+    view.setUint16(off, dosDate, true); off += 2;
+    view.setUint32(off, e.crc, true); off += 4;
+    view.setUint32(off, e.data.length, true); off += 4;
+    view.setUint32(off, e.data.length, true); off += 4;
+    view.setUint16(off, e.name.length, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint16(off, 0, true); off += 2;
+    view.setUint32(off, 0, true); off += 4;
+    view.setUint32(off, e.offset, true); off += 4;
+    bytes.set(e.name, off); off += e.name.length;
+  });
+  view.setUint32(off, 0x06054b50, true); off += 4;
+  view.setUint16(off, 0, true); off += 2;
+  view.setUint16(off, 0, true); off += 2;
+  view.setUint16(off, entries.length, true); off += 2;
+  view.setUint16(off, entries.length, true); off += 2;
+  view.setUint32(off, cdSize, true); off += 4;
+  view.setUint32(off, cdStart, true); off += 4;
+  view.setUint16(off, 0, true); off += 2;
+  return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function _xesc(v) {
+  return String(v == null ? '' : v)
+    // 去掉 XML 不收的控制字符，否则偶发的乱码字符会把整个 xlsx 搞坏打不开
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+function _colName(n) {
+  var s = '';
+  while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+// 样式：0 默认 / 1 大标题 / 2 表头 / 3 正文 / 4 正文(浅蓝隔行)
+function _stylesXml() {
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="4">' +
+      '<font><sz val="11"/><color rgb="FF000000"/><name val="微软雅黑"/></font>' +
+      '<font><b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="微软雅黑"/></font>' +
+      '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="微软雅黑"/></font>' +
+      '<font><sz val="11"/><color rgb="FF1F2937"/><name val="微软雅黑"/></font>' +
+    '</fonts>' +
+    '<fills count="7">' +
+      '<fill><patternFill patternType="none"/></fill>' +
+      '<fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF1F4E79"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF3A6EA5"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF548235"/><bgColor indexed="64"/></patternFill></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFE2EFDA"/><bgColor indexed="64"/></patternFill></fill>' +
+    '</fills>' +
+    '<borders count="2">' +
+      '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+      '<border>' +
+        '<left style="thin"><color rgb="FF9DB7D5"/></left>' +
+        '<right style="thin"><color rgb="FF9DB7D5"/></right>' +
+        '<top style="thin"><color rgb="FF9DB7D5"/></top>' +
+        '<bottom style="thin"><color rgb="FF9DB7D5"/></bottom>' +
+        '<diagonal/>' +
+      '</border>' +
+    '</borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="7">' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+      '<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="2" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="3" fillId="6" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+    '</styleSheet>';
+}
+
+function _sheetXml(sh) {
+  var n = sh.headers.length;
+  var cols = '';
+  for (var i = 0; i < n; i++) {
+    cols += '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + (sh.widths[i] || 14) + '" customWidth="1"/>';
+  }
+  var rowsXml = '';
+  // 第 1 行：整行合并的大标题
+  rowsXml += '<row r="1" ht="40" customHeight="1">';
+  rowsXml += '<c r="A1" s="1" t="inlineStr"><is><t>' + _xesc(sh.title) + '</t></is></c>';
+  for (var t = 2; t <= n; t++) rowsXml += '<c r="' + _colName(t) + '1" s="1"/>';
+  rowsXml += '</row>';
+  // 第 2 行：表头
+  rowsXml += '<row r="2" ht="28" customHeight="1">';
+  for (var h = 0; h < n; h++) {
+    var hs = (sh.headerStyles && sh.headerStyles[h]) || '2';
+    rowsXml += '<c r="' + _colName(h + 1) + '2" s="' + hs + '" t="inlineStr"><is><t>' + _xesc(sh.headers[h]) + '</t></is></c>';
+  }
+  rowsXml += '</row>';
+  // 正文
+  sh.rows.forEach(function (row, ri) {
+    var r = ri + 3;
+    var st = (sh.rowStyles && sh.rowStyles[ri] != null) ? String(sh.rowStyles[ri]) : ((ri % 2 === 0) ? '3' : '4');
+    rowsXml += '<row r="' + r + '" ht="26" customHeight="1">';
+    for (var c = 0; c < n; c++) {
+      var v = row[c];
+      var ref = _colName(c + 1) + r;
+      if (v === null || v === undefined || v === '') rowsXml += '<c r="' + ref + '" s="' + st + '"/>';
+      else if (typeof v === 'number') rowsXml += '<c r="' + ref + '" s="' + st + '"><v>' + v + '</v></c>';
+      else rowsXml += '<c r="' + ref + '" s="' + st + '" t="inlineStr"><is><t>' + _xesc(v) + '</t></is></c>';
+    }
+    rowsXml += '</row>';
+  });
+
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A3" sqref="A3"/></sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="22"/>' +
+    '<cols>' + cols + '</cols>' +
+    '<sheetData>' + rowsXml + '</sheetData>' +
+    '<mergeCells count="1"><mergeCell ref="A1:' + _colName(n) + '1"/></mergeCells>' +
+    '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
+    '<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>' +
+    '</worksheet>';
+}
+
+function _xlsxBlob(sheets) {
+  var n = sheets.length;
+  var files = [];
+  var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+  for (var i = 1; i <= n; i++) {
+    ct += '<Override PartName="/xl/worksheets/sheet' + i + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+  }
+  ct += '</Types>';
+  files.push({ name: '[Content_Types].xml', content: ct });
+  files.push({
+    name: '_rels/.rels',
+    content: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'
+  });
+
+  var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';
+  sheets.forEach(function (s, i) {
+    wb += '<sheet name="' + _xesc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+  });
+  wb += '</sheets></workbook>';
+  files.push({ name: 'xl/workbook.xml', content: wb });
+
+  var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  for (var j = 1; j <= n; j++) {
+    rels += '<Relationship Id="rId' + j + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + j + '.xml"/>';
+  }
+  rels += '<Relationship Id="rId' + (n + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+  files.push({ name: 'xl/_rels/workbook.xml.rels', content: rels });
+  files.push({ name: 'xl/styles.xml', content: _stylesXml() });
+  sheets.forEach(function (s, i) {
+    files.push({ name: 'xl/worksheets/sheet' + (i + 1) + '.xml', content: _sheetXml(s) });
+  });
+  return _zipStore(files);
+}
+
+// 自动下载被拦时的兜底：弹一个手动保存入口
+function _showSaveLink(url, filename) {
+  var wrap = document.createElement('div');
+  wrap.className = 'modal-overlay active';
+  wrap.style.zIndex = '99999';
+  wrap.innerHTML =
+    '<div class="modal" style="text-align:center">' +
+    '<h3>📥 保存文件</h3>' +
+    '<p style="font-size:0.85rem;color:var(--text-dim);margin:6px 0 16px">当前窗口拦截了自动下载，点下面的按钮手动保存</p>' +
+    '<a class="btn btn-primary" id="saveFileLink" href="' + url + '" download="' + filename + '" ' +
+    'style="display:inline-block;text-decoration:none;padding:13px 26px;font-size:1rem">💾 保存 ' + filename + '</a>' +
+    '<div class="modal-actions"><button class="btn btn-outline" id="saveFileClose">关闭</button></div>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  var closed = false;
+  function close() {
+    if (closed) return;
+    closed = true;
+    if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+  var closeBtn = wrap.querySelector('#saveFileClose');
+  if (closeBtn) closeBtn.onclick = close;
+  wrap.addEventListener('click', function (e) { if (e.target === wrap) close(); });
+  var link = wrap.querySelector('#saveFileLink');
+  if (link) link.addEventListener('click', function () { setTimeout(close, 2000); });
+}
+
+function _downloadBlob(blob, filename) {
+  if (window.navigator && window.navigator.msSaveOrOpenBlob) { window.navigator.msSaveOrOpenBlob(blob, filename); return; }
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  var ok = true;
+  try { a.click(); } catch (e) { ok = false; }
+  setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
+
+  // 判断是否处在内嵌窗口（预览面板 / 微信内置浏览器等），这类环境经常拦掉自动下载
+  var inFrame = false;
+  try { inFrame = !!(window.top && window.top !== window.self); } catch (e) { inFrame = true; }
+
+  if (!ok || inFrame) {
+    _showSaveLink(url, filename);
+  } else {
+    setTimeout(function () { URL.revokeObjectURL(url); }, 6000);
+  }
+}
+
+// 直接保存到电脑（Chrome / Edge 支持原生另存为，默认定位到桌面）
+function _saveToDisk(blob, filename) {
+  var picker = window.showSaveFilePicker;
+  if (typeof picker !== 'function') {
+    _downloadBlob(blob, filename);
+    toast('当前浏览器不支持直接保存，已改为下载');
+    return;
+  }
+  try {
+    picker.call(window, {
+      suggestedName: filename,
+      startIn: 'desktop',
+      types: [{ description: 'Excel 工作簿', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+    }).then(function (handle) {
+      return handle.createWritable().then(function (w) {
+        return w.write(blob).then(function () { return w.close(); });
+      });
+    }).then(function () {
+      toast('✅ 已保存：' + filename);
+    }).catch(function (err) {
+      if (err && err.name === 'AbortError') return;
+      _downloadBlob(blob, filename);
+      toast('已改为下载：' + filename);
+    });
+  } catch (e) {
+    _downloadBlob(blob, filename);
+  }
+}
+
+/* ---------- 各张打分表 ---------- */
+function _rowsByOrder(module) {
+  return STATE.data[module]
+    .filter(function (r) { return r.name && r.name.trim(); })
+    .sort(function (a, b) { return (a.order || 9999) - (b.order || 9999); });
+}
+
+// kind: 'vp' 声乐 / 'ip' 器乐
+function _scoreTable(kind, rows, titleOverride) {
+  var isVocal = kind === 'vp';
+  return {
+    name: isVocal ? '声乐打分表' : '器乐打分表',
+    title: titleOverride || (isVocal ? '声乐打分表' : '器乐打分表'),
+    headers: ['出场顺序', '姓　名', isVocal ? '抽中声乐曲目' : '抽中器乐曲目', '分　数'],
+    widths: [12, 16, 34, 12],
+    rows: rows.map(function (r) {
+      return [r.order || '', r.name, (isVocal ? r.vpResult : r.ipResult) || '', ''];
+    })
+  };
+}
+
+function _totalTable(rows) {
+  return {
+    name: '抽签打分总表',
+    title: '抽签打分总表（声乐 + 器乐）',
+    headers: ['出场顺序', '姓　名', '声乐曲目', '声乐分数', '器乐曲目', '器乐分数'],
+    headerStyles: ['2', '2', '2', '2', '5', '5'],
+    widths: [12, 14, 30, 12, 30, 12],
+    rows: rows.map(function (r) {
+      return [r.order || '', r.name, r.vpResult || '', '', r.ipResult || '', ''];
+    })
+  };
+}
+
+// 音乐表演打分表：按真实出场顺序排（声乐行浅蓝、器乐行浅绿区分方向）
+// 出场顺序用抽签抽到的原值，不能为了排版好看去重新编号 —— 否则学生手里的号就对不上了
+function _perfTable(rows) {
+  var ordered = rows.slice().sort(function (a, b) {
+    var ao = a.order != null ? a.order : 9999;
+    var bo = b.order != null ? b.order : 9999;
+    return ao - bo;
+  });
+  return {
+    name: '音乐表演打分表',
+    title: '音乐表演打分表',
+    headers: ['出场顺序', '姓　名', '表演类型', '曲　目', '分　数'],
+    widths: [12, 16, 12, 32, 12],
+    rows: ordered.map(function (r) {
+      return [r.order || '', r.name, r.perfType === 'vocal' ? '声乐' : '器乐', r.result || '', ''];
+    }),
+    rowStyles: ordered.map(function (r) { return r.perfType === 'vocal' ? 4 : 6; })
+  };
+}
+
+function _sightTable(rows) {
+  return {
+    name: '视唱打分表',
+    title: '视唱打分表',
+    headers: ['出场顺序', '姓　名', '视唱条数', '分　数'],
+    widths: [12, 16, 18, 12],
+    rows: rows.map(function (r) {
+      return [r.order || '', r.name, r.sightResult ? ('第' + r.sightResult + '条') : '', ''];
+    })
+  };
+}
+
+/* ---------- 导出入口 ---------- */
+// 构造本次要导出的表格
+function _buildExportSheets(module) {
+  _renumberOrders(module);
+  var named = _rowsByOrder(module);
+  if (named.length === 0) return null;
+
+  var sheets = [];
+  var fileBase = '';
+
+  if (module === 'edu') {
+    var hasIP = named.some(function (r) { return !!r.ipResult; });
+    var hasVP = named.some(function (r) { return !!r.vpResult; });
+    if (!hasIP && !hasVP) { toast('还没有抽中曲目，先抽签再导出'); return null; }
+    if (hasIP && hasVP) {
+      sheets.push(_totalTable(named));
+      sheets.push(_scoreTable('vp', named));
+      sheets.push(_scoreTable('ip', named));
+      fileBase = '抽签打分总表';
+    } else if (hasVP) {
+      sheets.push(_scoreTable('vp', named));
+      fileBase = '声乐打分表';
+    } else {
+      sheets.push(_scoreTable('ip', named));
+      fileBase = '器乐打分表';
+    }
+  } else if (module === 'perf') {
+    var drawn = named.some(function (r) { return !!r.result; });
+    if (!drawn) { toast('还没有抽中曲目，先抽签再导出'); return null; }
+    sheets.push(_perfTable(named));
+    fileBase = '音乐表演打分表';
+  } else {
+    sheets.push(_sightTable(named));
+    fileBase = '视唱打分表';
+  }
+
+  return { sheets: sheets, fileBase: fileBase };
+}
+
+function _undrawnCount(module, rows) {
+  return rows.filter(function (r) {
+    if (module === 'edu') return ((r.ip1 || r.ip2) && r.ipResult == null) || ((r.vp1 || r.vp2) && r.vpResult == null);
+    if (module === 'perf') return (r.p1 || r.p2) && r.result == null;
+    return r.sightResult == null;
+  }).length;
+}
+
+function exportExcel(module, mode) {
+  var built = _buildExportSheets(module);
+  if (!built) { toast('没有可导出的数据'); return; }
+
+  var undrawn = _undrawnCount(module, _rowsByOrder(module));
+  if (undrawn > 0) toast('注意：还有 ' + undrawn + ' 人没抽，表里曲目栏会空着');
+
+  var blob = _xlsxBlob(built.sheets);
+  var fileName = built.fileBase + '.xlsx';
+  if (mode === 'save') {
+    _saveToDisk(blob, fileName);
+  } else {
+    _downloadBlob(blob, fileName);
+    toast('✅ 已导出 ' + fileName);
+  }
+}
+
+// ============================================================
+// HISTORY
+// ============================================================
+function autoSaveHistory(module) {
+  const data = STATE.data[module];
+  const named = data.filter(r => r.name && r.name.trim());
+  if (named.length === 0) return;
+
+  const history = getHistory();
+  const entry = {
+    id: Date.now(),
+    module: module,
+    timestamp: new Date().toISOString(),
+    data: JSON.parse(JSON.stringify(named))
+  };
+  history.push(entry);
+  if (history.length > 200) history.splice(0, history.length - 200);
+  localStorage.setItem('jsme_lottery_history_v6', JSON.stringify(history));
+}
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('jsme_lottery_history_v6') || '[]');
+  } catch(e) { return []; }
+}
+function saveHistory(h) {
+  localStorage.setItem('jsme_lottery_history_v6', JSON.stringify(h));
+}
+function renderHistory() {
+  const container = document.getElementById('history-content');
+  const history = getHistory();
+  if (history.length === 0) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-icon">📭</span><p>暂无历史记录</p><p style="font-size:0.85rem;margin-top:4px">完成抽签后会自动保存</p></div>`;
+    return;
+  }
+
+  const groups = {};
+  history.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  history.forEach(h => {
+    const date = h.timestamp.slice(0, 10);
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(h);
+  });
+
+  let html = '';
+  for (const [date, entries] of Object.entries(groups)) {
+    html += `<div class="history-group">
+      <div class="history-group-header" onclick="toggleHistoryGroup(this)">
+        <span class="date-label">📅 ${date} <span style="font-weight:400;color:var(--text-dim);margin-left:8px">${entries.length} 条记录</span></span>
+        <div class="date-actions">
+          <button class="btn btn-xs btn-outline" onclick="event.stopPropagation();deleteHistoryDate('${date}')">🗑 删全天</button>
+        </div>
+      </div>
+      <div class="history-group-body">`;
+    entries.forEach(e => {
+      const moduleLabel = e.module === 'edu' ? '音乐教育' : e.module === 'perf' ? '音乐表演' : '视唱';
+      const moduleClass = e.module === 'edu' ? 'edu' : e.module === 'perf' ? 'perf' : 'sight';
+      const time = e.timestamp.slice(11, 16);
+      html += `<div class="history-item">
+        <div class="item-info">
+          <span class="item-module ${moduleClass}">${moduleLabel}</span>
+          <span class="item-count">${e.data.length} 名学生</span>
+          <span class="item-time">${time}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-xs btn-outline" onclick="viewHistoryDetail('${e.id}')">查看</button>
+          <button class="btn btn-xs btn-outline" style="color:var(--danger)" onclick="deleteHistoryItem('${e.id}')">✕</button>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  container.innerHTML = html;
+}
+function toggleHistoryGroup(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+function viewHistoryDetail(id) {
+  const history = getHistory();
+  const entry = history.find(h => String(h.id) === String(id));
+  if (!entry) return;
+  const modal = document.getElementById('detailModal');
+  const title = document.getElementById('detailTitle');
+  const content = document.getElementById('detailContent');
+  const moduleLabel = entry.module === 'edu' ? '音乐教育' : entry.module === 'perf' ? '音乐表演' : '视唱';
+  title.textContent = `📋 ${moduleLabel} · ${entry.timestamp.slice(0,16).replace('T',' ')}`;
+
+  let tableHtml = '<table class="detail-table"><thead><tr><th>出场顺序</th><th>姓名</th>';
+  if (entry.module === 'edu') tableHtml += '<th>抽中器乐</th><th>抽中声乐</th>';
+  else if (entry.module === 'perf') tableHtml += '<th>类型</th><th>抽中曲目</th>';
+  else tableHtml += '<th>视唱条数</th>';
+  tableHtml += '</tr></thead><tbody>';
+
+  const sorted = [...entry.data].sort((a, b) => (a.order || 999) - (b.order || 999));
+  sorted.forEach(r => {
+    tableHtml += `<tr><td>${r.order || ''}</td><td>${escHtml(r.name)}</td>`;
+    if (entry.module === 'edu') tableHtml += `<td>${r.ipResult || '-'}</td><td>${r.vpResult || '-'}</td>`;
+    else if (entry.module === 'perf') {
+      const typeLabel = r.perfType === 'vocal' ? '声乐' : '器乐';
+      tableHtml += `<td>${typeLabel}</td><td>${r.result || '-'}</td>`;
+    }
+    else tableHtml += `<td>${r.sightResult ? '第'+r.sightResult+'条' : '-'}</td>`;
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody></table>';
+  content.innerHTML = tableHtml;
+  modal.classList.add('active');
+}
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('active');
+}
+function deleteHistoryItem(id) {
+  const history = getHistory();
+  const newHistory = history.filter(h => String(h.id) !== String(id));
+  saveHistory(newHistory);
+  renderHistory();
+  toast('已删除');
+}
+function deleteHistoryDate(date) {
+  const history = getHistory();
+  const newHistory = history.filter(h => h.timestamp.slice(0, 10) !== date);
+  saveHistory(newHistory);
+  renderHistory();
+  toast(`已删除 ${date} 的全部记录`);
+}
+
+// ============================================================
+// CLICK FEEDBACK (震动 + 音效)
+// ============================================================
+const FEEDBACK = { sound: true, vibrate: true };
+
+function loadFeedbackPrefs() {
+  try {
+    const s = localStorage.getItem('jsme_feedback');
+    if (s) { const p = JSON.parse(s); FEEDBACK.sound = p.sound !== false; FEEDBACK.vibrate = p.vibrate !== false; }
+  } catch(e) {}
+}
+function saveFeedbackPrefs() {
+  try { localStorage.setItem('jsme_feedback', JSON.stringify(FEEDBACK)); } catch(e) {}
+}
+
+// 轻量点击音 - 每次创建用完即停，杜绝余音
+
+function clickSound() {
+  if (!FEEDBACK.sound) return;
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    // 每次创建一次性osc，响完就停，没有余音
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 1180;
+    gain.gain.setValueAtTime(0.075, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+  } catch(e) {}
+}
+
+// 震动
+// 震动 - Android用navigator.vibrate，iOS用低频音模拟haptic
+function doVibrate(ms) {
+  if (!FEEDBACK.vibrate) return;
+  try {
+    // Android/桌面Chrome
+    if (navigator.vibrate) navigator.vibrate(ms);
+  } catch(e) {}
+  // iOS没有vibrate API，用低频音模拟触感（只在静音模式才有用）
+  // 这个由hapticSound处理，这里不重复
+}
+
+// iOS haptic模拟：低频短音，短促触感
+function hapticSound() {
+  if (!FEEDBACK.vibrate) return;
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = 55;
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.025);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.03);
+  } catch(e) {}
+}
+
+// 初始化全局点击监听 - 被动模式，不阻塞动画
+function initClickFeedback() {
+  let _lastSound = 0;
+  const SELECTOR = 'button, [onclick], .card, .back-btn, input, textarea, select, label, ' +
+                   '.muted-toggle, .mode-btn, .result-cell, .btn, .pick-opt, .row-checkbox, td, th';
+  document.addEventListener('pointerdown', function(e) {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const target = t.closest(SELECTOR);
+    if (!target) return;
+
+    // 首次交互就唤醒音频上下文（iOS 必须在手势里 resume，否则第一次点击没声音）
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') ctx.resume();
+    } catch(err) {}
+
+    // 节流：35ms，连点也不会糊成一片
+    const now = Date.now();
+    if (now - _lastSound < 35) return;
+    _lastSound = now;
+
+    // 音效和震动各自独立，两个都开就都触发
+    if (FEEDBACK.sound) clickSound();
+    if (FEEDBACK.vibrate) { doVibrate(8); if (!FEEDBACK.sound) hapticSound(); }
+  }, { passive: true });
+}
+
+function toggleFeedbackSound() {
+  FEEDBACK.sound = !FEEDBACK.sound;
+  saveFeedbackPrefs();
+  updateFeedbackToggle();
+  if (FEEDBACK.sound) clickSound();
+}
+function toggleFeedbackVibrate() {
+  FEEDBACK.vibrate = !FEEDBACK.vibrate;
+  saveFeedbackPrefs();
+  if (FEEDBACK.vibrate) doVibrate(30);
+}
+function updateFeedbackToggle() {
+  const el = document.getElementById('feedbackStatus');
+  if (el) {
+    el.innerHTML = `🔊 ${FEEDBACK.sound?'开':'关'} | 📳 ${FEEDBACK.vibrate?'开':'关'}`;
+  }
+}
+
+// ============================================================
+// AUDIO (Web Audio API)
+// ============================================================
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTick(module) {
+  // 主界面那个音效开关（FEEDBACK.sound）统一管所有声音，模块里的静音状态也保留
+  if (typeof FEEDBACK !== 'undefined' && !FEEDBACK.sound) return;
+  if (STATE.muted[module]) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 800 + Math.random() * 400;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+  } catch(e) {}
+}
+function playDing(module) {
+  if (typeof FEEDBACK !== 'undefined' && !FEEDBACK.sound) return;
+  if (STATE.muted[module]) return;
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    [880, 1100, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    });
+  } catch(e) {}
+}
+function toggleMute(module) {
+  STATE.muted[module] = !STATE.muted[module];
+  updateMuteBtn(module);
+  saveState();
+}
+function updateMuteBtn(module) {
+  const btn = document.getElementById('muteBtn-' + module);
+  if (btn) {
+    if (STATE.muted[module]) { btn.textContent = '🔇 静音'; btn.classList.add('muted'); }
+    else { btn.textContent = '🔊 音效'; btn.classList.remove('muted'); }
+  }
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ============================================================
+// PASTE SUPPORT (Smart recognition + Preview)
+// ============================================================
+function isLikelyName(val) {
+  if (/^[\u4e00-\u9fa5]{2,4}$/.test(val)) return true;
+  if (/^[a-zA-Z\s.\-']{2,20}$/.test(val)) return true;
+  return false;
+}
+function isLikelyPiece(val) {
+  if (!val || val.length < 3) return false;
+  if (/[曲奏鸣练习歌乐章号NoOp\.KVk小调大调协奏幻想即兴变奏叙事谐谑波兰舞马祖卡夜曲圆舞狂想序组套琶音赋格前奏间奏尾声c小调C大调D大调d小调E大调e小调F大调f小调G大调g小调A大调a小调B大调b小调降升]/.test(val)) return true;
+  if (val.length >= 8 && !/^\d+$/.test(val)) return true;
+  return false;
+}
+
+function smartParsePaste(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const parsed = [];
+
+  for (const line of lines) {
+    let cols;
+    if (line.includes('\t')) {
+      cols = line.split('\t');
+    } else if (line.includes(',') || line.includes('，') || line.includes('、') || line.includes(';') || line.includes('；')) {
+      cols = line.split(/[,，、;；]/);
+    } else if (line.split(/\s+/).length > 1) {
+      cols = line.split(/\s+/);
+    } else {
+      cols = [line];
+    }
+    if (cols.length === 0) continue;
+    const trimmed = cols.map(c => c.trim()).filter(c => c.length > 0);
+    if (trimmed.length === 0) continue;
+
+    const result = { name: '', pieces: [], suggestedModule: 'sight' };
+
+    if (trimmed.length === 1) {
+      result.name = trimmed[0];
+    } else {
+      const nameCandidates = [];
+      const pieceCandidates = [];
+      trimmed.forEach(val => {
+        if (isLikelyName(val) && nameCandidates.length === 0) {
+          nameCandidates.push(val);
+        } else {
+          pieceCandidates.push(val);
+        }
+      });
+      if (nameCandidates.length > 0) {
+        result.name = nameCandidates[0];
+        result.pieces = pieceCandidates;
+      } else if (isLikelyName(trimmed[0])) {
+        result.name = trimmed[0];
+        result.pieces = trimmed.slice(1);
+      } else {
+        result.name = trimmed[0];
+        result.pieces = trimmed.slice(1);
+      }
+    }
+
+    const pc = result.pieces.length;
+    if (pc === 0) result.suggestedModule = 'sight';
+    else if (pc <= 2) result.suggestedModule = 'perf';
+    else if (pc <= 4) result.suggestedModule = 'edu';
+    else result.suggestedModule = 'edu';
+
+    parsed.push(result);
+  }
+  return parsed;
+}
+
+// ============================================================
+// VISIBLE PASTE INPUT (button-triggered textarea modal)
+// ============================================================
+function showPasteInput(module) {
+  STATE.pasteInputModule = module;
+  document.getElementById('pasteInputTextarea').value = '';
+  document.getElementById('pasteInputModal').classList.add('active');
+  // Focus the textarea
+  setTimeout(() => {
+    document.getElementById('pasteInputTextarea').focus();
+  }, 150);
+}
+
+function closePasteInput() {
+  document.getElementById('pasteInputModal').classList.remove('active');
+}
+
+// 模块页里的粘贴导入：跟主界面快速导入同一套识别引擎，一键导入到当前模块
+function pasteSmartImport() {
+  var module = STATE.pasteInputModule || 'edu';
+  var el = document.getElementById('pasteInputTextarea');
+  var text = el ? el.value : '';
+  if (!String(text || '').trim()) { toast('请在文本框中粘贴内容'); return; }
+  closePasteInput();
+  smartImportTo(module, text);
+}
+
+function processPasteInput() {
+  const text = document.getElementById('pasteInputTextarea').value;
+  if (!text.trim()) { toast('请在文本框中粘贴数据'); return; }
+  const rows = _previewRowsFromText(text);
+  if (rows.length === 0) { toast('未能识别粘贴内容'); return; }
+  closePasteInput();
+  showPastePreview(rows, STATE.pasteInputModule);
+}
+
+// ============================================================
+// PASTE PREVIEW MODAL
+// ============================================================
+// ---- 预览用的统一行处理：兼容「智能识别」两种解析结果 ----
+// 所有入口（主界面快速导入 / 模块粘贴导入 / Ctrl+V）都用同一个解析器，
+// 保证「预览看到的」和「真正导进去的」完全一致
+function _previewRowsFromText(text) {
+  const students = parseImportRows(text);
+  return students.map(function (s) {
+    return { name: s.name, ip: s.ip || [], vp: s.vp || [], type: s.type || null, pieces: [] };
+  });
+}
+
+function _guessPreviewModule(rows) {
+  const hasIP = rows.some(function (r) { return (r.ip || []).length > 0; });
+  const hasVP = rows.some(function (r) { return (r.vp || []).length > 0; });
+  if (!hasIP && !hasVP) return 'sight';
+  if (hasIP && hasVP) return 'edu';
+  return 'perf';
+}
+
+// 主界面快速导入：先预览识别结果，再决定导到哪个模块
+function previewQuickImport() {
+  const el = document.getElementById('quick-name-input');
+  const text = el ? el.value : '';
+  if (!String(text || '').trim()) { toast('请先粘贴或输入内容'); return; }
+
+  const rows = _previewRowsFromText(text);
+  if (rows.length === 0) { toast('没有识别到学生，请检查格式'); return; }
+
+  showPastePreview(rows, _guessPreviewModule(rows));
+}
+
+function _pasteRowType(row) {
+  if (row.type === 'vocal' || row.type === 'instrumental') return row.type;
+  const ip = row.ip || [], vp = row.vp || [];
+  if (ip.length && !vp.length) return 'instrumental';
+  if (vp.length && !ip.length) return 'vocal';
+  if (ip.length && vp.length) {
+    // 已经分好器乐/声乐的，哪边曲目多就归哪边；一样多再按曲名逐首判
+    if (ip.length !== vp.length) return ip.length > vp.length ? 'instrumental' : 'vocal';
+    return _guessPerfType({ type: null, ip: ip, vp: vp });
+  }
+  let v = 0, i = 0;
+  (row.pieces || []).forEach(function (p) {
+    const k = classifyPiece(p);
+    if (k === 'vp') v++; else if (k === 'ip') i++;
+  });
+  return v > i ? 'vocal' : 'instrumental';
+}
+
+function _pasteRowPieces(row) {
+  const ps = (row.ip || []).concat(row.vp || []);
+  return ps.length ? ps : (row.pieces || []);
+}
+
+function _pastePreviewHtml(targetModule, rows) {
+  let html = '<table class="paste-preview-table"><thead><tr><th>姓名</th>';
+  if (targetModule === 'edu') {
+    html += '<th>器乐曲目1</th><th>器乐曲目2</th><th>声乐曲目1</th><th>声乐曲目2</th>';
+  } else if (targetModule === 'perf') {
+    html += '<th>表演类型</th><th>曲目1</th><th>曲目2</th>';
+  } else {
+    html += '<th>视唱条数</th>';
+  }
+  html += '</tr></thead><tbody>';
+
+  rows.forEach(function (p) {
+    html += '<tr><td class="name-col">' + escHtml(p.name || '') + '</td>';
+    const ps = _pasteRowPieces(p);
+    if (targetModule === 'edu') {
+      const vals = (p.ip || p.vp)
+        ? [(p.ip || [])[0] || '', (p.ip || [])[1] || '', (p.vp || [])[0] || '', (p.vp || [])[1] || '']
+        : [ps[0] || '', ps[1] || '', ps[2] || '', ps[3] || ''];
+      vals.forEach(function (v) { html += '<td class="piece-col">' + escHtml(v) + '</td>'; });
+    } else if (targetModule === 'perf') {
+      html += '<td class="piece-col">' + (_pasteRowType(p) === 'vocal' ? '🎤 声乐' : '🎻 器乐') + '</td>';
+      html += '<td class="piece-col">' + escHtml(ps[0] || '') + '</td>';
+      html += '<td class="piece-col">' + escHtml(ps[1] || '') + '</td>';
+    } else {
+      html += '<td class="piece-col">抽签后生成</td>';
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function _renderPastePreview(targetModule, rows) {
+  ['edu', 'perf', 'sight'].forEach(mod => {
+    const btn = document.getElementById('pasteTypeBtn-' + mod);
+    if (btn) btn.classList.toggle('active', mod === targetModule);
+  });
+  const moduleLabel = targetModule === 'edu' ? '音乐教育' : targetModule === 'perf' ? '音乐表演' : '视唱';
+  document.getElementById('pastePreviewInfo').innerHTML =
+    '📊 识别到 <strong>' + rows.length + '</strong> 人 · 目标模块：<strong>' + moduleLabel
+    + '</strong>（可点下方按钮切换）';
+  document.getElementById('pastePreviewContent').innerHTML = _pastePreviewHtml(targetModule, rows);
+}
+
+function showPastePreview(parsed, targetModule) {
+  if (!targetModule) targetModule = _guessPreviewModule(parsed);
+  STATE.pastePreview.targetModule = targetModule;
+  STATE.pastePreview.parsedRows = parsed;
+  _renderPastePreview(targetModule, parsed);
+  document.getElementById('pastePreviewModal').classList.add('active');
+}
+
+function changePasteModule(targetModule) {
+  STATE.pastePreview.targetModule = targetModule;
+  _renderPastePreview(targetModule, STATE.pastePreview.parsedRows || []);
+}
+
+function confirmPaste() {
+  const { targetModule, parsedRows } = STATE.pastePreview;
+  if (!targetModule || !parsedRows || parsedRows.length === 0) {
+    closePastePreview();
+    return;
+  }
+
+  const rows = parsedRows.map(parsed => {
+    const ps = _pasteRowPieces(parsed);
+    if (targetModule === 'edu') {
+      if (parsed.ip || parsed.vp) {
+        return makeEduRow(parsed.name,
+          (parsed.ip || [])[0] || '', (parsed.ip || [])[1] || '',
+          (parsed.vp || [])[0] || '', (parsed.vp || [])[1] || '');
+      }
+      return makeEduRow(parsed.name, ps[0] || '', ps[1] || '', ps[2] || '', ps[3] || '');
+    } else if (targetModule === 'perf') {
+      return makePerfRow(parsed.name, ps[0] || '', ps[1] || '', _pasteRowType(parsed));
+    }
+    return makeSightRow(parsed.name);
+  });
+
+  fillModuleRows(targetModule, rows);
+
+  saveState();
+  closePastePreview();
+  if (targetModule === 'edu') renderEdu();
+  else if (targetModule === 'perf') renderPerf();
+  else renderSight();
+  // 从主界面发起的预览，导完直接跳到对应模块，省得再点一次
+  if (STATE.currentPage === 'main') navTo(targetModule);
+  toast(`已导入 ${parsedRows.length} 条数据到${targetModule === 'edu' ? '音乐教育' : targetModule === 'perf' ? '音乐表演' : '视唱'}`);
+}
+
+function closePastePreview() {
+  document.getElementById('pastePreviewModal').classList.remove('active');
+  STATE.pastePreview.parsedRows = [];
+  STATE.pastePreview.targetModule = null;
+}
+
+// Global paste listener (Ctrl+V)
+document.addEventListener('paste', function(e) {
+  const activePage = STATE.currentPage;
+  if (!['edu', 'perf', 'sight'].includes(activePage)) return;
+
+  // Don't intercept paste in input/textarea elements
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+  if (tag === 'input' || tag === 'textarea') return;
+
+  const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+  if (!pasteData) return;
+
+  const hasMultiCol = pasteData.includes('\t') || pasteData.includes(',') || pasteData.includes('，') || pasteData.includes('、');
+  const hasMultiLine = pasteData.includes('\n');
+  if (!hasMultiCol && !hasMultiLine) return;
+
+  e.preventDefault();
+
+  const rows = _previewRowsFromText(pasteData);
+  if (rows.length === 0) { toast('未能识别粘贴内容'); return; }
+
+  showPastePreview(rows, activePage);
+});
+
+// ============================================================
+// MODAL CLICK OUTSIDE TO CLOSE
+// ============================================================
+document.getElementById('clearModal').addEventListener('click', function(e) {
+  if (e.target === this) closeClearModal();
+});
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
+});
+document.getElementById('pastePreviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closePastePreview();
+});
+document.getElementById('pasteInputModal').addEventListener('click', function(e) {
+  if (e.target === this) closePasteInput();
+});
+document.getElementById('pickerModal').addEventListener('click', function(e) {
+  if (e.target === this) closePicker();
+});
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeClearModal();
+    closeDetailModal();
+    closePastePreview();
+    closePasteInput();
+    closePicker();
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+document.getElementById('sightCount').value = STATE.sightCount;
+updateSightRepeatBtn();
+// Only render main page; edu/perf/sight render on demand via navTo()
+navTo('main');
+
+console.log('🎹 江苏省音乐艺考抽签系统 V6 已就绪');
+console.log('   📖 音乐教育 | 🎵 音乐表演 | 🎼 视唱 | 📋 历史记录');
+console.log('   🆕 独立结果列 | 一键全抽按钮 | 粘贴导入入口 | 音乐表演合并表格');
+</script>
+
+  <div class="feedback-toggle" id="feedbackToggle">
+    <span id="feedbackStatus">🔊 开 | 📳 开</span>
+  </div>
+
+  <script>
+  (function(){
+    let pressTimer;
+    document.addEventListener('DOMContentLoaded', function(){
+      loadFeedbackPrefs();
+      initClickFeedback();
+      updateFeedbackToggle();
+      
+      const el = document.getElementById('feedbackToggle');
+      if (!el) return;
+      el.addEventListener('pointerdown', function(e){
+        e.stopPropagation();
+        pressTimer = setTimeout(function(){ toggleFeedbackVibrate(); }, 500);
+      });
+      el.addEventListener('pointerup', function(e){
+        e.stopPropagation();
+        clearTimeout(pressTimer);
+        // 短按 = 切换音效
+        toggleFeedbackSound();
+      });
+      el.addEventListener('pointermove', function(){ clearTimeout(pressTimer); });
+      el.addEventListener('pointercancel', function(){ clearTimeout(pressTimer); });
+    });
+  })();
+  </script>
+
+  <script>
+  /* ============================================================
+     音乐氛围脚本（纯装饰）
+     - 不改任何业务函数，只用事件委托 / MutationObserver 旁挂
+     - 任何一步出错都静默跳过，绝不影响抽签、导入、导出
+     ============================================================ */
+  (function(){
+    try{
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var SYMBOLS = ['\u266A','\u266B','\u2669','\u266C','\u266D','\u266F','\u266E'];
+      var COLORS  = ['#c084fc','#f472b6','#22d3ee','#fbbf24','#a855f7','#f9a8d4'];
+      function rnd(a,b){ return a + Math.random()*(b-a); }
+      function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+      /* 1) 背景飘动音符 */
+      function buildNotes(){
+        var wrap = document.getElementById('mxNotes');
+        if(!wrap) return;
+        var n = window.innerWidth < 700 ? 9 : 16;
+        var frag = document.createDocumentFragment();
+        for(var i=0;i<n;i++){
+          var el = document.createElement('i');
+          el.textContent = pick(SYMBOLS);
+          el.style.left = rnd(0,100).toFixed(2) + '%';
+          el.style.top  = rnd(55,112).toFixed(2) + '%';
+          el.style.fontSize = rnd(1.1,2.5).toFixed(2) + 'rem';
+          el.style.color = pick(COLORS);
+          el.style.animationDuration = rnd(22,42).toFixed(1) + 's';
+          el.style.animationDelay = (-rnd(0,42)).toFixed(1) + 's';
+          frag.appendChild(el);
+        }
+        wrap.appendChild(frag);
+      }
+
+      /* 2) 点击处冒出的音符 */
+      function popNote(x, y){
+        var el = document.createElement('span');
+        el.className = 'mx-pop';
+        el.textContent = pick(SYMBOLS);
+        el.style.left = x + 'px';
+        el.style.top  = y + 'px';
+        el.style.fontSize = rnd(1.1,1.7).toFixed(2) + 'rem';
+        el.style.color = pick(COLORS);
+        document.body.appendChild(el);
+        setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 950);
+      }
+
+      /* 3) 抽中瞬间从中心迸发 */
+      var lastBurst = 0;
+      function burst(cx, cy){
+        var now = Date.now();
+        if (now - lastBurst < 500) return;
+        lastBurst = now;
+        for(var i=0;i<15;i++){
+          (function(i){
+            var el = document.createElement('span');
+            el.className = 'mx-pop mx-burst';
+            el.textContent = pick(SYMBOLS);
+            el.style.left = cx + 'px';
+            el.style.top  = cy + 'px';
+            el.style.fontSize = rnd(1.2,2.3).toFixed(2) + 'rem';
+            el.style.color = pick(COLORS);
+            var ang = (i/15)*Math.PI*2 + rnd(-0.25,0.25);
+            var dist = rnd(90,270);
+            el.style.setProperty('--dx', (Math.cos(ang)*dist).toFixed(1) + 'px');
+            el.style.setProperty('--dy', (Math.sin(ang)*dist).toFixed(1) + 'px');
+            el.style.animationDelay = (i*0.012).toFixed(3) + 's';
+            document.body.appendChild(el);
+            setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 1200);
+          })(i);
+        }
+      }
+
+      /* 4) 抽签遮罩：环绕音符 + 揭晓迸发 */
+      function initOverlay(){
+        var ov = document.getElementById('lotteryOverlay');
+        var rolling = document.getElementById('lotteryRolling');
+        if(!ov || !rolling) return;
+
+        var orbit = document.createElement('div');
+        orbit.className = 'mx-orbit';
+        var n = 14;
+        for(var i=0;i<n;i++){
+          var el = document.createElement('i');
+          el.textContent = pick(SYMBOLS);
+          el.style.setProperty('--a', (i*(360/n)).toFixed(1) + 'deg');
+          el.style.fontSize = rnd(1.5,2.7).toFixed(2) + 'rem';
+          el.style.color = pick(COLORS);
+          el.style.animationDelay = (-(i * 0.28)).toFixed(2) + 's';
+          orbit.appendChild(el);
+        }
+        ov.appendChild(orbit);
+
+        if (window.MutationObserver){
+          var mo = new MutationObserver(function(){
+            if (rolling.classList.contains('gold')){
+              burst(window.innerWidth/2, window.innerHeight/2);
+            }
+          });
+          mo.observe(rolling, { attributes:true, attributeFilter:['class'] });
+        }
+      }
+
+      /* 5) 全局点击反馈（捕获阶段，先于任何 stopPropagation） */
+      document.addEventListener('pointerdown', function(e){
+        var t = e.target;
+        if(!t || !t.closest) return;
+        if(t.closest('.btn, .card, .mode-btn, .back-btn, .sight-repeat-toggle, .menu-item')){
+          popNote(e.clientX, e.clientY);
+        }
+      }, true);
+
+      function boot(){
+        buildNotes();
+        initOverlay();
+      }
+      if (document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
+    }catch(err){ /* 装饰层出错就当没这回事，绝不影响主功能 */ }
+  })();
+  </script>
+</body>
+</html>
